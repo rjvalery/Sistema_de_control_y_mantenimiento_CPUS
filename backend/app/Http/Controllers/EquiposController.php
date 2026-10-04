@@ -75,8 +75,13 @@ class EquiposController extends Controller
         $solucionGarantias = $request->solucion_garantias;
         $timestampRegistro = $request->timestamp_registro ?: now()->toDateTimeString();
 
+        $queVaIntervenir = $request->que_va_intervenir ?: $request->input('componentes');
+        if (is_array($queVaIntervenir)) {
+            $queVaIntervenir = implode(';', array_filter($queVaIntervenir));
+        }
+
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $serialDisco, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro) {
+            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $serialDisco, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir) {
                 Equipo::create([
                     'timestamp_registro'  => $timestampRegistro,
                     'nombre_analista'     => $nombreAnalista,
@@ -86,7 +91,7 @@ class EquiposController extends Controller
                     'energiza'            => $request->energiza,
                     'da_video'            => $request->da_video,
                     'estado_actual'       => $request->estado_actual,
-                    'que_va_intervenir'   => $request->que_va_intervenir,
+                    'que_va_intervenir'   => $queVaIntervenir ?: null,
                     'origen_pieza'        => $request->origen_pieza,
                     'serial_disco'        => $serialDisco ?: null,
                     'descripcion_novedad' => $descripcionNovedad ?: null,

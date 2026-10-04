@@ -95,6 +95,7 @@ class SopladoController extends Controller
                     'maquina_contenia' => $maquinaContenia,
                     'gel_cucarachas'   => $gelCucarachas,
                     'foto_ruta'        => $fotoRuta,
+                    'fecha_registro'   => now(),
                     'created_at'       => now(),
                 ]);
 

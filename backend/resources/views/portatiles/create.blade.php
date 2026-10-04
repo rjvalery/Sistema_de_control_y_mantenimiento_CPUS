@@ -309,7 +309,7 @@
                 
                 <!-- Botones para estado de éxito -->
                 <div id="modalBotonesExito" class="d-grid gap-2">
-                    <a id="btnIrEvidencia" href="{{ route('portatiles.create') }}" class="btn btn-warning fw-bold py-2 shadow-sm">
+                    <a id="btnIrEvidencia" href="{{ route('portatiles.evidencia') }}" class="btn btn-warning fw-bold py-2 shadow-sm">
                         <i class="fa-solid fa-camera me-1"></i> Subir Evidencia Fotográfica Ahora
                     </a>
                     <button type="button" class="btn btn-outline-secondary py-2" data-bs-dismiss="modal">
@@ -334,7 +334,7 @@
     window.AppUrls = {
         buscarEquipo: '{{ route("inventario.buscar") }}',
         guardarPortatiles: '{{ route("portatiles.store") }}',
-        evidenciaPortatiles: '{{ route("portatiles.create") }}',
+        evidenciaPortatiles: '{{ route("portatiles.evidencia") }}',
         ultimoRegistro: '{{ route("portatiles.ultimo_registro") }}'
     };
 </script>
