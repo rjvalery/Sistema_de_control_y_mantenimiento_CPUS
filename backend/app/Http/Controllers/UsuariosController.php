@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Usuario;
+use App\Models\Rol;
+use App\Http\Requests\StoreUsuarioRequest;
+use App\Http\Requests\UpdateUsuarioRequest;
+use App\Http\Requests\ChangePasswordRequest;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
+
+class UsuariosController extends Controller
+{
+    /**
+     * Display a listing of the users.
+     */
+    public function index(Request $request)
+    {
+        Gate::authorize('has-permission', 'usuarios.ver');
+
+        $busqueda = $request->query('buscar');
+        $query = Usuario::with('rolesRelation');
+
+        if ($busqueda) {
+            $query->where(function($q) use ($busqueda) {
+                $q->where('nombre', 'like', "%{$busqueda}%")
+                  ->orWhere('usuario', 'like', "%{$busqueda}%");
+            });
+        }
+
+        $usuarios = $query->orderBy('id', 'desc')->get();
+        $roles = Rol::all();
+
+        return view('usuarios.index', compact('usuarios', 'roles', 'busqueda'));
+    }
+
+    /**
+     * Store a newly created user in storage.
+     */
+    public function store(StoreUsuarioRequest $request)
+    {
+        Gate::authorize('has-permission', 'usuarios.crear');
+
+        $rolModel = Rol::findOrFail($request->rol_id);
+
+        $usuario = Usuario::create([
+            'nombre'     => $request->nombre,
+            'usuario'    => $request->usuario,
+            'password'   => Hash::make($request->password),
+            'activo'     => 1,
+            'rol'        => $rolModel->slug, // Backward compatibility
+            'created_at' => now(),
+        ]);
+
+        $usuario->rolesRelation()->attach($rolModel->id);
+
+        return redirect()->route('usuarios.index')->with('msg', 'Usuario creado exitosamente.');
+    }
+
+    /**
+     * Update the specified user in storage.
+     */
+    public function update(UpdateUsuarioRequest $request)
+    {
+        Gate::authorize('has-permission', 'usuarios.editar');
+
+        $usuario = Usuario::findOrFail($request->id);
+
+        if (auth()->id() === $usuario->id && $request->activo == 0) {
+            return back()->with('error', 'No puedes desactivar tu propia cuenta.');
+        }
+
+        if (auth()->id() === $usuario->id && !$usuario->hasRole('admin') && Rol::find($request->rol_id)->slug !== 'admin') {
+           // Si el admin se quita su propio rol de admin accidentalmente (opcional)
+        }
+
+        $rolModel = Rol::findOrFail($request->rol_id);
+
+        $usuario->nombre = $request->nombre;
+        $usuario->usuario = $request->usuario;
+        $usuario->activo = $request->activo;
+        $usuario->rol = $rolModel->slug; // Backward compatibility
+
+        if (!empty($request->password)) {
+            $usuario->password = Hash::make($request->password);
+        }
+
+        $usuario->save();
+
+        $usuario->rolesRelation()->sync([$rolModel->id]);
+
+        return redirect()->route('usuarios.index')->with('msg', 'Usuario actualizado exitosamente.');
+    }
+
+    public function cambiarPasswordPropia(ChangePasswordRequest $request)
+    {
+        $user = auth()->user();
+
+        if (!Hash::check($request->password_actual, $user->password)) {
+            return back()->with('error', 'La contraseña actual es incorrecta.');
+        }
+
+        $user->update(['password' => Hash::make($request->password_nueva)]);
+
+        return back()->with('msg', 'Contraseña actualizada con éxito.');
+    }
+
+    /**
+     * Muestra la vista para editar los permisos específicos de un usuario.
+     */
+    public function permisos($id)
+    {
+        Gate::authorize('has-permission', 'usuarios.permisos');
+
+        $usuario = Usuario::with(['permisosRelation', 'rolesRelation.permisos'])->findOrFail($id);
+        // Agrupar todos los permisos disponibles por módulo
+        $permisosPorModulo = \App\Models\Permiso::all()->groupBy('modulo');
+
+        // Permisos otorgados directamente al usuario
+        $permisosDirectos = $usuario->permisosRelation->pluck('id')->toArray();
+        
+        // Permisos que ya tiene por su rol
+        $permisosPorRol = collect();
+        foreach($usuario->rolesRelation as $rol) {
+            $permisosPorRol = $permisosPorRol->merge($rol->permisos->pluck('id'));
+        }
+        $permisosPorRol = $permisosPorRol->unique()->toArray();
+
+        return view('usuarios.permisos', compact('usuario', 'permisosPorModulo', 'permisosDirectos', 'permisosPorRol'));
+    }
+
+    /**
+     * Sincroniza los permisos dinámicos del usuario.
+     */
+    public function guardarPermisos(Request $request, $id)
+    {
+        Gate::authorize('has-permission', 'usuarios.permisos');
+
+        $usuario = Usuario::findOrFail($id);
+        $permisosIds = $request->input('permisos', []);
+
+        // Guardar permisos directamente en el usuario (sincroniza borrando los anteriores y creando nuevos)
+        $usuario->permisosRelation()->sync($permisosIds);
+
+        return redirect()->route('usuarios.index')->with('msg', 'Permisos de ' . $usuario->nombre . ' actualizados exitosamente.');
+    }
+}
