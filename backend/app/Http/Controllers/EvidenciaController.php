@@ -16,9 +16,9 @@ class EvidenciaController extends Controller
      */
     public function show(string $path)
     {
-        // Validación de seguridad: Sólo usuarios autenticados y con rol administrador
-        if (!Auth::check() || Auth::user()->rol !== 'admin') {
-            abort(403, 'Acceso denegado. Esta evidencia es estrictamente confidencial.');
+        // Validación de seguridad: Sólo usuarios autenticados
+        if (!Auth::check()) {
+            abort(401, 'Debes iniciar sesión para consultar las evidencias.');
         }
 
         // Verifica si el archivo existe en el disco personalizado que mapea a la carpeta en Windows

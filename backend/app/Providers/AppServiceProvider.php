@@ -23,17 +23,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Implicitly grant "admin" role all permissions
+        // Superadministrador tiene todos los permisos
         Gate::before(function ($user, $ability) {
-            if ($user->hasRole('admin')) {
+            if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
                 return true;
+            }
+
+            // Evaluación dinámica: permite usar @can('slug.permiso') o middleware 'can:slug.permiso'
+            if (method_exists($user, 'hasPermission') && $ability !== 'has-permission') {
+                if ($user->hasPermission($ability)) {
+                    return true;
+                }
             }
         });
 
-        // Registrar gate global para evaluar cualquier permiso por slug
-        // Ejemplo: @can('inventario.cargue_masivo')
+        // Registrar gate global para evaluar permisos con sintaxis Gate::authorize('has-permission', 'slug')
         Gate::define('has-permission', function ($user, $permissionSlug) {
-            return $user->hasPermission($permissionSlug);
+            return method_exists($user, 'hasPermission') ? $user->hasPermission($permissionSlug) : false;
         });
+
+        // Habilitar estilo nativo Bootstrap 5 para paginaciones de Laravel
+        \Illuminate\Pagination\Paginator::useBootstrapFive();
     }
 }

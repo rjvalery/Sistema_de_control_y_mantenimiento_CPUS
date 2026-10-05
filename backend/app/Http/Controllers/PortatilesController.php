@@ -13,17 +13,23 @@ class PortatilesController extends Controller
 {
     public function index(Request $request)
     {
-        $busqueda = $request->query('buscar');
+        $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+        $limite = (int) ($request->query('limite') ?? 50);
+        if ($limite <= 0 || $limite > 500) {
+            $limite = 50;
+        }
 
         $query = GarantiaPortatil::query();
 
         if ($busqueda) {
             $query->where(function($q) use ($busqueda) {
                 $q->where('placa_id_equipo', 'like', "%{$busqueda}%")
+                  ->orWhere('numero_traslado', 'like', "%{$busqueda}%")
                   ->orWhere('numero_ticket', 'like', "%{$busqueda}%")
-                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%");
+                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%")
+                  ->orWhere('estado_actual_equipo', 'like', "%{$busqueda}%");
             });
         }
         if ($fechaDesde) {
@@ -33,15 +39,17 @@ class PortatilesController extends Controller
             $query->where('created_at', '<=', $fechaHasta . ' 23:59:59');
         }
 
-        $registros = $query->orderBy('id', 'desc')->get();
+        $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
+        $totalGeneral = GarantiaPortatil::count();
 
         return view('portatiles.index', [
-            'registros' => $registros,
-            'totalFiltrados' => $registros->count(),
-            'totalGeneral' => GarantiaPortatil::count(),
-            'busqueda' => $busqueda,
-            'fechaDesde' => $fechaDesde,
-            'fechaHasta' => $fechaHasta,
+            'registros'      => $registros,
+            'totalFiltrados' => $registros->total(),
+            'totalGeneral'   => $totalGeneral,
+            'busqueda'       => $busqueda,
+            'fechaDesde'     => $fechaDesde,
+            'fechaHasta'     => $fechaHasta,
+            'limite'         => $limite,
         ]);
     }
 
@@ -187,7 +195,8 @@ class PortatilesController extends Controller
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
                     $request->placa_id_equipo,
                     'Diagnóstico Portátiles',
-                    $nombreAnalista
+                    $nombreAnalista,
+                    $request->numero_traslado
                 );
             });
 

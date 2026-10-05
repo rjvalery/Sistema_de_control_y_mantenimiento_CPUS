@@ -1,3 +1,0 @@
-<?php
-// Removed for security.
-http_response_code(404);

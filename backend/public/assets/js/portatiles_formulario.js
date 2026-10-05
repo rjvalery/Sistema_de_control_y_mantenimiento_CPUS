@@ -197,12 +197,14 @@ function enviarFormulario() {
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando diagnóstico...';
 
     const formData = new FormData(form);
+    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     fetch(window.AppUrls.guardarPortatiles, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
         }
     })
     .then(async r => {

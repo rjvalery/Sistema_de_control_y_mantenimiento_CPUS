@@ -22,13 +22,15 @@ Route::middleware('auth')->group(function () {
     // Inventario (API para búsqueda AJAX)
     Route::get('/inventario/buscar-equipo', [\App\Http\Controllers\InventarioController::class, 'buscarEquipo'])->name('inventario.buscar');
 
-    // Inventario (Cargue Masivo y Bitácora)
-    Route::get('/inventario', [\App\Http\Controllers\CargueMasivoController::class, 'index'])->name('inventario.index');
-    Route::get('/inventario/plantilla', [\App\Http\Controllers\CargueMasivoController::class, 'plantilla'])->name('inventario.plantilla');
-    Route::post('/inventario/procesar', [\App\Http\Controllers\CargueMasivoController::class, 'procesar'])->name('inventario.procesar');
-    Route::get('/inventario/sincronizar', [\App\Http\Controllers\CargueMasivoController::class, 'sincronizar'])->name('inventario.sincronizar');
+    // Inventario (Cargue Masivo y Bitácora protegido por RBAC)
+    Route::middleware('can:inventario.cargue_masivo')->group(function () {
+        Route::get('/inventario', [\App\Http\Controllers\CargueMasivoController::class, 'index'])->name('inventario.index');
+        Route::get('/inventario/plantilla', [\App\Http\Controllers\CargueMasivoController::class, 'plantilla'])->name('inventario.plantilla');
+        Route::post('/inventario/procesar', [\App\Http\Controllers\CargueMasivoController::class, 'procesar'])->name('inventario.procesar');
+        Route::get('/inventario/sincronizar', [\App\Http\Controllers\CargueMasivoController::class, 'sincronizar'])->name('inventario.sincronizar');
+    });
 
-    // Visor seguro de evidencias (Restringido en controlador a admins)
+    // Visor seguro de evidencias
     Route::get('/evidencias/{path}', [\App\Http\Controllers\EvidenciaController::class, 'show'])
         ->where('path', '.*')
         ->name('evidencias.show');
@@ -52,11 +54,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/portatiles/guardar', [PortatilesController::class, 'store'])->name('portatiles.store');
     Route::get('/portatiles/bitacora', [PortatilesController::class, 'index'])->name('portatiles.index');
 
-    // Usuarios
-    Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
-    Route::post('/usuarios/crear', [UsuariosController::class, 'store'])->name('usuarios.store');
-    Route::post('/usuarios/editar', [UsuariosController::class, 'update'])->name('usuarios.update');
-    Route::get('/usuarios/{id}/permisos', [UsuariosController::class, 'permisos'])->name('usuarios.permisos');
-    Route::post('/usuarios/{id}/permisos', [UsuariosController::class, 'guardarPermisos'])->name('usuarios.guardar_permisos');
+    // Usuarios (Gestión RBAC protegida a nivel de ruta)
+    Route::middleware('can:usuarios.ver')->group(function () {
+        Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+        Route::post('/usuarios/crear', [UsuariosController::class, 'store'])->middleware('can:usuarios.crear')->name('usuarios.store');
+        Route::post('/usuarios/editar', [UsuariosController::class, 'update'])->middleware('can:usuarios.editar')->name('usuarios.update');
+        Route::get('/usuarios/{id}/permisos', [UsuariosController::class, 'permisos'])->middleware('can:usuarios.permisos')->name('usuarios.permisos');
+        Route::post('/usuarios/{id}/permisos', [UsuariosController::class, 'guardarPermisos'])->middleware('can:usuarios.permisos')->name('usuarios.guardar_permisos');
+    });
+
     Route::post('/usuarios/cambiar-password', [UsuariosController::class, 'cambiarPasswordPropia'])->name('usuarios.cambiar_password');
 });

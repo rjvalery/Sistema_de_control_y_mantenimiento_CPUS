@@ -21,6 +21,16 @@
 /public/uploads/
 /public/fotos
 /public/fotos/
+/public/test*.php
+/public/fix*.php
+/public/run*.php
+/public/testdb.php
+/public/read_log.php
+/public/index_test.php
+/public/check_*.php
+/public/debug_*.php
+/public/audit_*.php
+/public/describe_*.php
 /storage/app/public/uploads/
 /storage/app/public/evidencias/
 /storage/*.key

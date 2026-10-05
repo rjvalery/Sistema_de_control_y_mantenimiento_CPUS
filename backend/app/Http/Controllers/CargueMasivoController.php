@@ -55,7 +55,13 @@ class CargueMasivoController extends Controller
         }
 
         if ($traslado) {
-            $query->where('num_traslado', $traslado);
+            if ($traslado === 'sin_traslado') {
+                $query->where(function($q) {
+                    $q->whereNull('num_traslado')->orWhere('num_traslado', '');
+                });
+            } else {
+                $query->where('num_traslado', $traslado);
+            }
         }
 
         $registros = $query->orderBy('id', 'desc')->limit($limite)->get();
@@ -97,8 +103,8 @@ class CargueMasivoController extends Controller
 
     public function plantilla()
     {
-        if (Auth::user()->rol !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Acceso denegado.');
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
+            abort(403, 'No tienes permiso para descargar la plantilla de cargue.');
         }
 
         $delimitador = ';';
@@ -130,8 +136,8 @@ class CargueMasivoController extends Controller
 
     public function procesar(Request $request)
     {
-        if (Auth::user()->rol !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Acceso denegado.');
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
+            abort(403, 'No tienes permiso para procesar cargues masivos.');
         }
 
         $request->validate([
@@ -334,29 +340,19 @@ class CargueMasivoController extends Controller
 
     public function sincronizar(Request $request)
     {
-        if (Auth::user()->rol !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Acceso denegado.');
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
+            abort(403, 'No tienes permiso para sincronizar el inventario.');
         }
 
         $traslado = trim($request->query('traslado'));
         
-        $placasEquipos = Equipo::pluck('placa_id')->toArray();
-        $placasSoplado = SopladoRegistro::pluck('placa_id')->toArray();
-        $placasPortatiles = GarantiaPortatil::pluck('placa_id_equipo')->toArray();
-        
-        $todasLasPlacas = array_unique(array_merge($placasEquipos, $placasSoplado, $placasPortatiles));
+        $inventarioService = app(\App\Services\InventarioService::class);
+        $resultados = $inventarioService->conciliarInventarioCompleto(!empty($traslado) ? $traslado : null);
 
-        $query = InventarioGeneral::whereIn('placa_id', $todasLasPlacas)->orWhereIn('identificador_1', $todasLasPlacas);
-        if ($traslado) {
-            $query->where('num_traslado', $traslado);
-        }
-
-        $afectados = $query->update([
-            'intervenido' => 1,
-            'modulo_intervencion' => 'Sincronizado'
-        ]);
+        $msg = "Sincronización y Conciliación completada con éxito. ";
+        $msg .= "Se actualizaron {$resultados['intervenidos_actualizados']} máquinas intervenidas y se recuperaron {$resultados['traslados_recuperados']} números de traslado.";
 
         return redirect()->route('inventario.index', $traslado ? ['traslado' => $traslado] : [])
-                         ->with('msg', "Sincronización completada. {$afectados} máquinas marcadas como intervenidas.");
+                         ->with('msg', $msg);
     }
 }

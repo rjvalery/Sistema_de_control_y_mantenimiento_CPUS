@@ -142,6 +142,7 @@ async function enviarFormulario() {
     }
 
     const formData = new FormData(form);
+    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'foto_evidencia.jpg');
@@ -151,7 +152,8 @@ async function enviarFormulario() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
         }
     })
     .then(r => r.json())

@@ -13,9 +13,13 @@ class SopladoController extends Controller
 {
     public function index(Request $request)
     {
-        $busqueda = $request->query('buscar');
+        $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+        $limite = (int) ($request->query('limite') ?? 50);
+        if ($limite <= 0 || $limite > 500) {
+            $limite = 50;
+        }
 
         $query = SopladoRegistro::query();
 
@@ -23,7 +27,8 @@ class SopladoController extends Controller
             $query->where(function($q) use ($busqueda) {
                 $q->where('placa_id', 'like', "%{$busqueda}%")
                   ->orWhere('num_traslado', 'like', "%{$busqueda}%")
-                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%");
+                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%")
+                  ->orWhere('maquina_contenia', 'like', "%{$busqueda}%");
             });
         }
         if ($fechaDesde) {
@@ -33,15 +38,17 @@ class SopladoController extends Controller
             $query->where('created_at', '<=', $fechaHasta . ' 23:59:59');
         }
 
-        $registros = $query->orderBy('id', 'desc')->get();
+        $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
+        $totalGeneral = SopladoRegistro::count();
 
         return view('soplado.index', [
-            'registros' => $registros,
-            'totalFiltrados' => $registros->count(),
-            'totalGeneral' => SopladoRegistro::count(),
-            'busqueda' => $busqueda,
-            'fechaDesde' => $fechaDesde,
-            'fechaHasta' => $fechaHasta,
+            'registros'      => $registros,
+            'totalFiltrados' => $registros->total(),
+            'totalGeneral'   => $totalGeneral,
+            'busqueda'       => $busqueda,
+            'fechaDesde'     => $fechaDesde,
+            'fechaHasta'     => $fechaHasta,
+            'limite'         => $limite,
         ]);
     }
 
@@ -102,7 +109,8 @@ class SopladoController extends Controller
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
                     $request->placa_id,
                     'soplado',
-                    $nombreAnalista
+                    $nombreAnalista,
+                    $request->num_traslado
                 );
             });
 

@@ -13,9 +13,13 @@ class EquiposController extends Controller
 {
     public function index(Request $request)
     {
-        $busqueda = $request->query('buscar');
+        $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+        $limite = (int) ($request->query('limite') ?? 50);
+        if ($limite <= 0 || $limite > 500) {
+            $limite = 50;
+        }
 
         $query = Equipo::query();
 
@@ -23,7 +27,9 @@ class EquiposController extends Controller
             $query->where(function($q) use ($busqueda) {
                 $q->where('placa_id', 'like', "%{$busqueda}%")
                   ->orWhere('num_traslado', 'like', "%{$busqueda}%")
-                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%");
+                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%")
+                  ->orWhere('estado_actual', 'like', "%{$busqueda}%")
+                  ->orWhere('tipo_gestion', 'like', "%{$busqueda}%");
             });
         }
         if ($fechaDesde) {
@@ -33,16 +39,17 @@ class EquiposController extends Controller
             $query->where('fecha_creacion', '<=', $fechaHasta . ' 23:59:59');
         }
 
-        $registros = $query->orderBy('id', 'desc')->get();
+        $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
         $totalGeneral = Equipo::count();
 
         return view('equipos.index', [
-            'registros' => $registros,
-            'totalFiltrados' => $registros->count(),
-            'totalGeneral' => $totalGeneral,
-            'busqueda' => $busqueda,
-            'fechaDesde' => $fechaDesde,
-            'fechaHasta' => $fechaHasta,
+            'registros'      => $registros,
+            'totalFiltrados' => $registros->total(),
+            'totalGeneral'   => $totalGeneral,
+            'busqueda'       => $busqueda,
+            'fechaDesde'     => $fechaDesde,
+            'fechaHasta'     => $fechaHasta,
+            'limite'         => $limite,
         ]);
     }
 
@@ -93,6 +100,12 @@ class EquiposController extends Controller
                     'estado_actual'       => $request->estado_actual,
                     'que_va_intervenir'   => $queVaIntervenir ?: null,
                     'origen_pieza'        => $request->origen_pieza,
+                    'tipo_ram'            => $request->tipo_ram ?: null,
+                    'marca_ram'           => $request->marca_ram ?: null,
+                    'capacidad_ram'       => $request->capacidad_ram ?: null,
+                    'tipo_disco'          => $request->tipo_disco ?: null,
+                    'marca_disco'         => $request->marca_disco ?: null,
+                    'capacidad_disco'     => $request->capacidad_disco ?: null,
                     'serial_disco'        => $serialDisco ?: null,
                     'descripcion_novedad' => $descripcionNovedad ?: null,
                     'novedad_it'          => $novedadIt ?: null,
@@ -106,7 +119,8 @@ class EquiposController extends Controller
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
                     $request->placa_id,
                     'Diagnóstico CPU',
-                    $nombreAnalista
+                    $nombreAnalista,
+                    $request->num_traslado
                 );
             });
 

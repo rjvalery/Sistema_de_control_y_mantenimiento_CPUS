@@ -200,7 +200,7 @@ async function enviarFormulario() {
     }
 
     const formData = new FormData(form);
-    const csrfToken = document.querySelector('input[name="_token"]').value;
+    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'foto_diagnostico.jpg');
