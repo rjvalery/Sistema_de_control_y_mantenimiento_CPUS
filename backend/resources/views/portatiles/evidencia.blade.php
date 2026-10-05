@@ -14,12 +14,16 @@
                 <p class="text-muted small mb-0">Módulo exclusivo para capturar y adjuntar la evidencia de laptops intervenidas.</p>
             </div>
             <div>
+                @can('portatiles.ver_bitacora')
                 <a href="{{ route('portatiles.index') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="fa-solid fa-list me-1"></i> Bitácora
                 </a>
+                @endcan
+                @can('portatiles.registrar')
                 <a href="{{ route('portatiles.create') }}" class="btn btn-outline-primary btn-sm ms-1">
                     <i class="fa-solid fa-laptop me-1"></i> Diagnóstico
                 </a>
+                @endcan
             </div>
         </div>
 
@@ -63,10 +67,10 @@
                                 <input type="hidden" name="nombre_analista" value="{{ auth()->user()->nombre }}">
                             @else
                                 <select name="nombre_analista" id="nombre_analista" class="form-select" required>
-                                    <option value="" disabled selected>-- Seleccione Analista --</option>
+                                    <option value="" disabled {{ old('nombre_analista') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                     @if (!empty($analistas))
                                         @foreach ($analistas as $a)
-                                            <option value="{{ $a->nombre }}" {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? 'selected' : '' }}>
+                                            <option value="{{ $a->nombre }}" {{ old('nombre_analista') == $a->nombre ? 'selected' : '' }}>
                                                 {{ $a->nombre }}
                                             </option>
                                         @endforeach
@@ -163,9 +167,11 @@
                     <button type="button" class="btn btn-primary fw-bold py-2" data-bs-dismiss="modal">
                         <i class="fa-solid fa-plus me-1"></i> Subir Otra Evidencia
                     </button>
+                    @can('portatiles.ver_bitacora')
                     <a href="{{ route('portatiles.index') }}" class="btn btn-outline-secondary py-2">
                         <i class="fa-solid fa-list me-1"></i> Ver en Bitácora
                     </a>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -323,10 +329,13 @@ async function enviarEvidencia() {
         } catch (e) {}
     }
 
-    const formData = new FormData(form);
+    const placaVal = document.getElementById('placa_id_equipo')?.value?.trim() || '';
+    formData.set('placa', placaVal);
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
+        formData.set('evidencia', fotoOptimBlob, 'evidencia_laptop.jpg');
+        formData.set('foto', fotoOptimBlob, 'evidencia_laptop.jpg');
     }
 
     fetch('{{ route("portatiles.guardarEvidencia") }}', {

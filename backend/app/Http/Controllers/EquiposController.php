@@ -7,12 +7,20 @@ use App\Models\InventarioGeneral;
 use App\Http\Requests\StoreEquipoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Exception;
 
 class EquiposController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+
+        // Verificación de permiso para consultar la bitácora de CPUs
+        if (!$user || (!$user->can('cpus.ver_bitacora') && !$user->hasRole('admin'))) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico CPU.');
+        }
+
         $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
@@ -22,6 +30,11 @@ class EquiposController extends Controller
         }
 
         $query = Equipo::query();
+
+        // Filtro de privacidad: Si tiene activo 'Ver únicamente mis propios registros y dashboard personal'
+        if (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio')) {
+            $query->where('nombre_analista', $user->nombre);
+        }
 
         if ($busqueda) {
             $query->where(function($q) use ($busqueda) {
@@ -40,7 +53,9 @@ class EquiposController extends Controller
         }
 
         $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
-        $totalGeneral = Equipo::count();
+        $totalGeneral = (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio'))
+            ? Equipo::where('nombre_analista', $user->nombre)->count()
+            : Equipo::count();
 
         return view('equipos.index', [
             'registros'      => $registros,
@@ -55,19 +70,60 @@ class EquiposController extends Controller
 
     public function create()
     {
+        if (!auth()->user()->can('cpus.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos diagnósticos de CPU.');
+        }
+
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->get();
         return view('equipos.create', compact('analistas'));
     }
 
     public function store(StoreEquipoRequest $request)
     {
-        $fotoRuta = null;
-        if ($request->hasFile('foto_equipo')) {
-            $fotoRuta = app(\App\Services\UploadService::class)->guardarEvidencia(
-                $request->file('foto_equipo'), 
-                $request->placa_id, 
-                'diagnostico'
-            );
+        if (!auth()->user()->can('cpus.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para guardar diagnósticos de CPU.');
+        }
+
+        $nombreArchivo = null;
+        if ($request->hasFile('evidencia') || $request->hasFile('foto') || $request->hasFile('foto_equipo') || $request->hasFile('foto_ruta')) {
+            $archivo = $request->file('evidencia') ?? $request->file('foto') ?? $request->file('foto_equipo') ?? $request->file('foto_ruta');
+            
+            $anio = now()->format('Y');
+            $meses = [
+                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            ];
+            $mes = $meses[(int)now()->format('n')] ?? ucfirst(now()->locale('es')->translatedFormat('F')); // Ej: Octubre
+            $dia = now()->format('d'); // Ej: 05
+            $modulo = 'cpus';
+
+            // Ruta base física
+            $basePath = env('EVIDENCIAS_PATH', 'C:\\Users\\LENOVO\\Pictures\\fotos');
+            $basePath = rtrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR);
+            
+            // Carpeta destino: C:\Users\LENOVO\Pictures\fotos\2026\Octubre\05
+            $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
+
+            if (!File::isDirectory($directorioDestino)) {
+                File::makeDirectory($directorioDestino, 0777, true, true);
+            }
+
+            // Nombre del archivo basado en la placa
+            $placaRaw = $request->placa ?? $request->placa_id ?? 'EQUIPO';
+            $placaLimpia = trim(strtoupper($placaRaw));
+            $extension = $archivo->getClientOriginalExtension() ?: 'jpg';
+            $nombreArchivo = $placaLimpia . '.' . $extension;
+
+            // Mover físicamente el archivo
+            $archivo->move($directorioDestino, $nombreArchivo);
+
+            // Redundancia en la subcarpeta del módulo
+            $directorioModulo = $basePath . DIRECTORY_SEPARATOR . $modulo . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
+            if (!File::isDirectory($directorioModulo)) {
+                File::makeDirectory($directorioModulo, 0777, true, true);
+            }
+            @copy($directorioDestino . DIRECTORY_SEPARATOR . $nombreArchivo, $directorioModulo . DIRECTORY_SEPARATOR . $nombreArchivo);
         }
 
         $user = auth()->user();
@@ -87,13 +143,15 @@ class EquiposController extends Controller
             $queVaIntervenir = implode(';', array_filter($queVaIntervenir));
         }
 
+        $placaFinal = $request->placa_id ?? $request->placa;
+
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $serialDisco, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir) {
-                Equipo::create([
+            DB::transaction(function () use ($request, $nombreArchivo, $nombreAnalista, $serialDisco, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir, $placaFinal) {
+                $equipo = Equipo::create([
                     'timestamp_registro'  => $timestampRegistro,
                     'nombre_analista'     => $nombreAnalista,
                     'num_traslado'        => $request->num_traslado,
-                    'placa_id'            => $request->placa_id,
+                    'placa_id'            => $placaFinal,
                     'tipo_gestion'        => $request->tipo_gestion,
                     'energiza'            => $request->energiza,
                     'da_video'            => $request->da_video,
@@ -112,12 +170,13 @@ class EquiposController extends Controller
                     'solucion_garantias'  => $solucionGarantias ?: null,
                     'motivo_baja'         => $request->motivo_baja,
                     'ubicacion_destino'   => $request->ubicacion_destino,
-                    'foto_equipo'         => $fotoRuta,
+                    'foto_equipo'         => $nombreArchivo,
+                    'evidencia'           => $nombreArchivo,
                     'fecha_creacion'      => now()
                 ]);
 
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
-                    $request->placa_id,
+                    $placaFinal,
                     'Diagnóstico CPU',
                     $nombreAnalista,
                     $request->num_traslado

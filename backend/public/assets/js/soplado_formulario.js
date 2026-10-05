@@ -142,10 +142,15 @@ async function enviarFormulario() {
     }
 
     const formData = new FormData(form);
+    const placaVal = document.getElementById('placa_id')?.value?.trim() || '';
+    formData.set('placa', placaVal);
+    formData.set('placa_id', placaVal);
     const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'foto_evidencia.jpg');
+        formData.set('evidencia', fotoOptimBlob, 'foto_evidencia.jpg');
+        formData.set('foto', fotoOptimBlob, 'foto_evidencia.jpg');
     }
 
     fetch(window.AppUrls.guardarSoplado, {

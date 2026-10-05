@@ -18,11 +18,12 @@ class StoreEquipoRequest extends FormRequest
         return [
             'nombre_analista'     => ['required', 'string', 'max:255'],
             'num_traslado'        => ['required', 'string', 'max:100'],
-            'placa_id'            => ['required', 'string', 'min:2', 'max:100'],
+            'placa_id'            => ['required_without:placa', 'nullable', 'string', 'min:2', 'max:100'],
+            'placa'               => ['required_without:placa_id', 'nullable', 'string', 'min:2', 'max:100'],
             'tipo_gestion'        => ['required', 'string', 'max:100'],
-            'energiza'            => ['nullable', 'string', 'max:50'],
-            'da_video'            => ['nullable', 'string', 'max:50'],
-            'estado_actual'       => ['nullable', 'string', 'max:100'],
+            'energiza'            => ['required', 'string', 'max:50'],
+            'da_video'            => ['required', 'string', 'max:50'],
+            'estado_actual'       => ['required', 'string', 'max:100'],
             'que_va_intervenir'   => ['nullable'],
             'componentes'         => ['nullable', 'array'],
             'origen_pieza'        => ['nullable', 'string', 'max:100'],
@@ -41,9 +42,10 @@ class StoreEquipoRequest extends FormRequest
             'solucion_garantias'  => ['nullable', 'string'],
             'timestamp_registro'  => ['nullable', 'string', 'max:50'],
             'ubicacion_destino'   => ['required', 'string', 'max:150'],
-            'foto_equipo'         => $esBaja 
-                                    ? ['nullable'] 
-                                    : ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'foto_equipo'         => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'evidencia'           => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'foto'                => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'foto_ruta'           => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ];
     }
 }

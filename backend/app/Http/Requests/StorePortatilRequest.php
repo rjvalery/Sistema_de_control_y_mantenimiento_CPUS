@@ -16,7 +16,8 @@ class StorePortatilRequest extends FormRequest
         return [
             'nombre_analista'                => ['required', 'string', 'max:255'],
             'numero_traslado'                => ['required', 'string', 'max:100'],
-            'placa_id_equipo'                => ['required', 'string', 'min:2', 'max:100'],
+            'placa_id_equipo'                => ['required_without:placa', 'nullable', 'string', 'min:2', 'max:100'],
+            'placa'                          => ['required_without:placa_id_equipo', 'nullable', 'string', 'min:2', 'max:100'],
             'tipo_gestion'                   => ['required', 'string', 'max:100'],
             'energiza'                       => ['required', 'string', 'max:50'],
             'da_video'                       => ['required', 'string', 'max:50'],
@@ -35,7 +36,10 @@ class StorePortatilRequest extends FormRequest
             'serial_disco'                   => ['nullable', 'string', 'max:100'],
             'reparado_por'                   => ['nullable', 'string', 'max:100'],
             'comentario_reparado'            => ['nullable', 'string'],
-            'foto_equipo'                    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'foto_equipo'                    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'evidencia'                      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'foto'                           => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'foto_ruta'                      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ];
     }
 }

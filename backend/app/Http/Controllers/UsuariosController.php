@@ -114,9 +114,26 @@ class UsuariosController extends Controller
     {
         Gate::authorize('has-permission', 'usuarios.permisos');
 
+        // Asegurar que el catálogo canónico esté sincronizado y libre de duplicados u obsoletos
+        \App\Services\RbacService::sincronizarCatalogo();
+
         $usuario = Usuario::with(['permisosRelation', 'rolesRelation.permisos'])->findOrFail($id);
-        // Agrupar todos los permisos disponibles por módulo
-        $permisosPorModulo = \App\Models\Permiso::all()->groupBy('modulo');
+        
+        // Obtener el catálogo ordenado por los 6 módulos canónicos
+        $catalogoModulos = array_keys(\App\Services\RbacService::getCatalogo());
+        $todosPermisos = \App\Models\Permiso::all()->groupBy('modulo');
+        
+        $permisosPorModulo = collect();
+        foreach ($catalogoModulos as $mod) {
+            if ($todosPermisos->has($mod)) {
+                $permisosPorModulo->put($mod, $todosPermisos->get($mod));
+            }
+        }
+        foreach ($todosPermisos as $mod => $items) {
+            if (!$permisosPorModulo->has($mod)) {
+                $permisosPorModulo->put($mod, $items);
+            }
+        }
 
         // Permisos otorgados directamente al usuario
         $permisosDirectos = $usuario->permisosRelation->pluck('id')->toArray();
@@ -132,17 +149,24 @@ class UsuariosController extends Controller
     }
 
     /**
-     * Sincroniza los permisos dinámicos del usuario.
+     * Sincroniza los permisos dinámicos del usuario de forma limpia y atómica.
      */
     public function guardarPermisos(Request $request, $id)
     {
         Gate::authorize('has-permission', 'usuarios.permisos');
 
         $usuario = Usuario::findOrFail($id);
-        $permisosIds = $request->input('permisos', []);
+        
+        // Sanitizar array de permisos recibidos
+        $permisosIds = array_filter(
+            array_map('intval', (array) $request->input('permisos', []))
+        );
 
-        // Guardar permisos directamente en el usuario (sincroniza borrando los anteriores y creando nuevos)
-        $usuario->permisosRelation()->sync($permisosIds);
+        // Validar que los IDs existan realmente en la tabla permisos
+        $permisosValidos = \App\Models\Permiso::whereIn('id', $permisosIds)->pluck('id')->toArray();
+
+        // Guardar permisos directamente en el usuario (sincroniza sin dejar huérfanos)
+        $usuario->permisosRelation()->sync($permisosValidos);
 
         return redirect()->route('usuarios.index')->with('msg', 'Permisos de ' . $usuario->nombre . ' actualizados exitosamente.');
     }

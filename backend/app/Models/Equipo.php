@@ -37,8 +37,22 @@ class Equipo extends Model
         'solucion_garantias',
         'ubicacion_destino',
         'foto_equipo',
+        'evidencia',
         'fecha_creacion',
     ];
+
+    /**
+     * Mapeo del atributo evidencia al campo físico en base de datos foto_equipo.
+     */
+    public function setEvidenciaAttribute($value)
+    {
+        $this->attributes['foto_equipo'] = $value;
+    }
+
+    public function getEvidenciaAttribute()
+    {
+        return $this->attributes['foto_equipo'] ?? null;
+    }
 
     protected $casts = [
         'fecha_creacion' => 'datetime',

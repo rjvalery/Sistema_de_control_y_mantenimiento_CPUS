@@ -7,12 +7,21 @@ use App\Models\InventarioGeneral;
 use App\Http\Requests\StoreSopladoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use App\Services\UploadService;
 use Exception;
 
 class SopladoController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+
+        // Verificación de permiso para consultar la bitácora de Soplado
+        if (!$user || (!$user->can('soplado.ver_bitacora') && !$user->hasRole('admin'))) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Mantenimiento / Soplado.');
+        }
+
         $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
@@ -22,6 +31,11 @@ class SopladoController extends Controller
         }
 
         $query = SopladoRegistro::query();
+
+        // Filtro de privacidad: Si tiene activo 'Ver únicamente mis propios registros y dashboard personal'
+        if (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio')) {
+            $query->where('nombre_analista', $user->nombre);
+        }
 
         if ($busqueda) {
             $query->where(function($q) use ($busqueda) {
@@ -39,7 +53,9 @@ class SopladoController extends Controller
         }
 
         $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
-        $totalGeneral = SopladoRegistro::count();
+        $totalGeneral = (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio'))
+            ? SopladoRegistro::where('nombre_analista', $user->nombre)->count()
+            : SopladoRegistro::count();
 
         return view('soplado.index', [
             'registros'      => $registros,
@@ -54,6 +70,10 @@ class SopladoController extends Controller
 
     public function create()
     {
+        if (!auth()->user()->can('soplado.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos mantenimientos de soplado.');
+        }
+
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->orderBy('nombre')->get();
         return view('soplado.create', compact('analistas'));
     }
@@ -71,14 +91,12 @@ class SopladoController extends Controller
 
     public function store(StoreSopladoRequest $request)
     {
-        $fotoRuta = null;
-        if ($request->hasFile('foto_equipo')) {
-            $fotoRuta = app(\App\Services\UploadService::class)->guardarEvidencia(
-                $request->file('foto_equipo'), 
-                $request->placa_id, 
-                'soplado'
-            );
+        if (!auth()->user()->can('soplado.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar soplado.');
         }
+
+        $placaFinal = $request->placa_id ?? $request->placa;
+        $fotoRuta = UploadService::procesarSubidaFisica($request, 'soplado', $placaFinal);
 
         $user = auth()->user();
         $nombreAnalista = ($user && $user->rol === 'analista') 
@@ -89,11 +107,11 @@ class SopladoController extends Controller
         $gelCucarachas = ($maquinaContenia === 'Cucaracha') ? ($request->gel_cucarachas ?: 'No') : 'No';
 
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $maquinaContenia, $gelCucarachas) {
-                SopladoRegistro::create([
+            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $maquinaContenia, $gelCucarachas, $placaFinal) {
+                $registro = SopladoRegistro::create([
                     'nombre_analista'  => $nombreAnalista,
                     'num_traslado'     => $request->num_traslado,
-                    'placa_id'         => $request->placa_id,
+                    'placa_id'         => $placaFinal,
                     'energiza'         => $request->energiza,
                     'da_video'         => $request->da_video,
                     'detecta_disco'    => $request->detecta_disco,
@@ -102,12 +120,14 @@ class SopladoController extends Controller
                     'maquina_contenia' => $maquinaContenia,
                     'gel_cucarachas'   => $gelCucarachas,
                     'foto_ruta'        => $fotoRuta,
+                    'foto_equipo'      => $fotoRuta,
+                    'evidencia'        => $fotoRuta,
                     'fecha_registro'   => now(),
                     'created_at'       => now(),
                 ]);
 
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
-                    $request->placa_id,
+                    $placaFinal,
                     'soplado',
                     $nombreAnalista,
                     $request->num_traslado

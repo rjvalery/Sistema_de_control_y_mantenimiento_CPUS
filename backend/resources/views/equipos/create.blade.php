@@ -26,11 +26,11 @@
                                 <div class="form-text text-muted small"><i class="fa-solid fa-lock me-1 text-success"></i>Sincronizado automáticamente con tu sesión activa.</div>
                             @else
                                 <select name="nombre_analista" id="nombre_analista" class="form-select" required>
-                                    <option value="" disabled selected>-- Seleccione Analista --</option>
+                                    <option value="" disabled {{ old('nombre_analista') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                     @if (!empty($analistas))
                                         @foreach ($analistas as $a)
-                                            <option value="{{ $a->nombre }}" {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? 'selected' : '' }}>
-                                                {{ $a->nombre }} {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? '(Tu sesión)' : '' }}
+                                            <option value="{{ $a->nombre }}" {{ old('nombre_analista') == $a->nombre ? 'selected' : '' }}>
+                                                {{ $a->nombre }}
                                             </option>
                                         @endforeach
                                     @endif
@@ -58,8 +58,8 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Tipo de gestión *</label>
                             <select name="tipo_gestion" id="tipo_gestion" class="form-select" required onchange="evaluarGestion()">
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Diagnostico" {{ old('tipo_gestion', 'Diagnostico') == 'Diagnostico' ? 'selected' : '' }}>Diagnóstico</option>
+                                <option value="" disabled {{ old('tipo_gestion') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Diagnostico" {{ old('tipo_gestion') == 'Diagnostico' ? 'selected' : '' }}>Diagnóstico</option>
                                 <option value="Intervencion" {{ old('tipo_gestion') == 'Intervencion' ? 'selected' : '' }}>Intervención</option>
                                 <option value="Novedad" {{ old('tipo_gestion') == 'Novedad' ? 'selected' : '' }}>Novedad</option>
                                 <option value="Baja" {{ old('tipo_gestion') == 'Baja' ? 'selected' : '' }}>Baja</option>
@@ -70,8 +70,8 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Energiza? *</label>
                             <select name="energiza" id="energiza" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('energiza', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('energiza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('energiza') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('energiza') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
@@ -79,8 +79,8 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Da video? *</label>
                             <select name="da_video" id="da_video" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('da_video', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('da_video') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('da_video') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('da_video') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
@@ -88,8 +88,8 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Estado actual del equipo *</label>
                             <select name="estado_actual" id="estado_actual" class="form-select" required onchange="evaluarEstado(this.value)">
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Funcional" {{ old('estado_actual', 'Funcional') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
+                                <option value="" disabled {{ old('estado_actual') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Funcional" {{ old('estado_actual') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
                                 <option value="Garantia" {{ old('estado_actual') == 'Garantia' ? 'selected' : '' }}>Garantía</option>
                                 <option value="Pendiente Repuesto" {{ old('estado_actual') == 'Pendiente Repuesto' ? 'selected' : '' }}>Pendiente Repuesto</option>
                             </select>
@@ -98,11 +98,11 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Ubicación destino *</label>
                             <select name="ubicacion_destino" id="ubicacion_destino" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione Ubicación --</option>
+                                <option value="" disabled {{ old('ubicacion_destino') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                 <option value="Sala Dban" {{ old('ubicacion_destino') == 'Sala Dban' ? 'selected' : '' }}>Sala Dban</option>
                                 <option value="Sala Garantias" {{ old('ubicacion_destino') == 'Sala Garantias' ? 'selected' : '' }}>Sala Garantías</option>
                                 <option value="Almacen" {{ old('ubicacion_destino') == 'Almacen' ? 'selected' : '' }}>Almacén</option>
-                                <option value="Sala Bajas" {{ old('ubicacion_destino', 'Sala Bajas') == 'Sala Bajas' ? 'selected' : '' }}>Sala Bajas</option>
+                                <option value="Sala Bajas" {{ old('ubicacion_destino') == 'Sala Bajas' ? 'selected' : '' }}>Sala Bajas</option>
                             </select>
                         </div>
 
@@ -127,7 +127,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">¿Qué va a intervenir? *</label>
                                         <select name="que_va_intervenir" id="que_va_intervenir" class="form-select" onchange="evaluarIntervencion(this.value)">
-                                            <option value="" disabled selected>-- Seleccione Componente --</option>
+                                            <option value="" disabled {{ old('que_va_intervenir') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Disco" {{ old('que_va_intervenir') == 'Disco' ? 'selected' : '' }}>Disco Duro / SSD</option>
                                             <option value="RAM" {{ old('que_va_intervenir') == 'RAM' ? 'selected' : '' }}>Memoria RAM</option>
                                             <option value="Pila de BIOS" {{ old('que_va_intervenir') == 'Pila de BIOS' ? 'selected' : '' }}>Pila de BIOS</option>
@@ -138,7 +138,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Origen de pieza *</label>
                                         <select name="origen_pieza" id="origen_pieza" class="form-select">
-                                            <option value="" disabled selected>-- Seleccione Origen --</option>
+                                            <option value="" disabled {{ old('origen_pieza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Nuevo" {{ old('origen_pieza') == 'Nuevo' ? 'selected' : '' }}>Nuevo</option>
                                             <option value="Reacondicionado" {{ old('origen_pieza') == 'Reacondicionado' ? 'selected' : '' }}>Reacondicionado</option>
                                         </select>
@@ -211,7 +211,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Motivo de baja *</label>
                                         <select name="motivo_baja" id="motivo_baja" class="form-select">
-                                            <option value="" disabled selected>-- Seleccione motivo --</option>
+                                            <option value="" disabled {{ old('motivo_baja') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Obsoleto" {{ old('motivo_baja') == 'Obsoleto' ? 'selected' : '' }}>Obsoleto</option>
                                             <option value="No energiza" {{ old('motivo_baja') == 'No energiza' ? 'selected' : '' }}>No energiza</option>
                                             <option value="Baja total" {{ old('motivo_baja') == 'Baja total' ? 'selected' : '' }}>Baja total</option>
@@ -248,7 +248,7 @@
                             
                             <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">
                                 <!-- Input principal para validación del formulario -->
-                                <input type="file" name="foto_equipo" id="foto_equipo" 
+                                <input type="file" name="evidencia" id="foto_equipo" 
                                        style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden;" 
                                        accept="image/*">
 

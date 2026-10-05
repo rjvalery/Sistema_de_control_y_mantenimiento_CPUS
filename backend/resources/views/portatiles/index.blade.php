@@ -5,7 +5,9 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-bold"><i class="fa-solid fa-laptop text-success me-2"></i>Bitácora de Diagnóstico y Garantías Portátiles</h5>
+        @can('portatiles.registrar')
         <a href="{{ route('portatiles.create') }}" class="btn btn-success btn-sm text-white"><i class="fa-solid fa-plus me-1"></i> Nuevo Diagnóstico</a>
+        @endcan
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('portatiles.index') }}" class="row g-2 mb-4 align-items-center">
@@ -65,8 +67,8 @@
                         </td>
                         <td><small class="text-muted">{{ $row->estado_final_equipo ?: 'N/A' }}</small></td>
                         <td class="text-center">
-                            @if(!empty($row->foto_ruta))
-                                <a href="{{ route('evidencias.show', ['path' => $row->foto_ruta]) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="Ver Evidencia Fotográfica">
+                            @if(!empty($row->foto_ruta) || !empty($row->evidencia))
+                                <a href="{{ \App\Services\UploadService::routeEvidencia($row->foto_ruta ?? $row->evidencia, 'portatiles', $row->created_at ?? $row->fecha_creacion, $row->placa_id_equipo) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="Ver Evidencia Fotográfica">
                                     <i class="fa-solid fa-image"></i>
                                 </a>
                             @else

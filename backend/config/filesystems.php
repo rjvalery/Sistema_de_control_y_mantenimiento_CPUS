@@ -49,7 +49,7 @@ return [
 
         'fotos_servidor' => [
             'driver' => 'local',
-            'root' => env('UPLOADS_BASE_PATH', storage_path('app/public/evidencias')),
+            'root' => env('EVIDENCIAS_PATH', env('UPLOADS_BASE_PATH', 'C:/Users/LENOVO/Pictures/fotos')),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/evidencias',
             'visibility' => 'private',
             'throw' => false,

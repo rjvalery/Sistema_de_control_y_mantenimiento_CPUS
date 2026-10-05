@@ -25,10 +25,35 @@ class SopladoRegistro extends Model
         'maquina_contenia',
         'gel_cucarachas',
         'foto_ruta',
+        'foto_equipo',
+        'evidencia',
         'fecha_registro',
         'created_at',
         'fecha_creacion',
     ];
+
+    /**
+     * Mapeo de evidencia y foto_equipo al campo foto_ruta.
+     */
+    public function setEvidenciaAttribute($value)
+    {
+        $this->attributes['foto_ruta'] = $value;
+    }
+
+    public function getEvidenciaAttribute()
+    {
+        return $this->attributes['foto_ruta'] ?? null;
+    }
+
+    public function setFotoEquipoAttribute($value)
+    {
+        $this->attributes['foto_ruta'] = $value;
+    }
+
+    public function getFotoEquipoAttribute()
+    {
+        return $this->attributes['foto_ruta'] ?? null;
+    }
 
     protected $casts = [
         'fecha_registro' => 'datetime',

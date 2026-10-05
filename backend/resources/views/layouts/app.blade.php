@@ -28,33 +28,53 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('dashboard') }}"><i class="fa-solid fa-gauge-high me-1"></i> Dashboard</a>
                     </li>
+                    @canany(['cpus.registrar', 'cpus.ver_bitacora'])
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-desktop me-1"></i> Diagnóstico CPU
                         </a>
                         <ul class="dropdown-menu">
+                            @can('cpus.registrar')
                             <li><a class="dropdown-item" href="{{ route('equipos.create') }}"><i class="fa-solid fa-plus me-2 text-primary"></i>Nuevo Registro</a></li>
+                            @endcan
+                            @can('cpus.ver_bitacora')
                             <li><a class="dropdown-item" href="{{ route('equipos.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
+                            @endcan
                         </ul>
                     </li>
+                    @endcanany
+
+                    @canany(['soplado.registrar', 'soplado.ver_bitacora'])
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-wind me-1"></i> Soplado
                         </a>
                         <ul class="dropdown-menu">
+                            @can('soplado.registrar')
                             <li><a class="dropdown-item" href="{{ route('soplado.create') }}"><i class="fa-solid fa-plus me-2 text-info"></i>Nuevo Registro</a></li>
+                            @endcan
+                            @can('soplado.ver_bitacora')
                             <li><a class="dropdown-item" href="{{ route('soplado.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
+                            @endcan
                         </ul>
                     </li>
+                    @endcanany
+
+                    @canany(['portatiles.registrar', 'portatiles.ver_bitacora'])
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-laptop me-1"></i> Diagnóstico Portátiles
                         </a>
                         <ul class="dropdown-menu">
+                            @can('portatiles.registrar')
                             <li><a class="dropdown-item" href="{{ route('portatiles.create') }}"><i class="fa-solid fa-plus me-2 text-success"></i>Nuevo Diagnóstico</a></li>
+                            @endcan
+                            @can('portatiles.ver_bitacora')
                             <li><a class="dropdown-item" href="{{ route('portatiles.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
+                            @endcan
                         </ul>
                     </li>
+                    @endcanany
                     @can('inventario.cargue_masivo')
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('inventario.index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Inventario</a>

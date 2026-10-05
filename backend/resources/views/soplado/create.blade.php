@@ -24,16 +24,16 @@
                                 <div class="form-text text-muted small"><i class="fa-solid fa-lock me-1 text-success"></i>Sincronizado automáticamente con tu sesión activa.</div>
                             @else
                                 <select name="nombre_analista" id="nombre_analista" class="form-select" required>
-                                    <option value="" disabled selected>-- Seleccione Analista --</option>
+                                    <option value="" disabled {{ old('nombre_analista') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                     @if (!empty($analistas))
                                         @foreach ($analistas as $a)
-                                            <option value="{{ $a->nombre }}" {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? 'selected' : '' }}>
-                                                {{ $a->nombre }} {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? '(Tu sesión)' : '' }}
+                                            <option value="{{ $a->nombre }}" {{ old('nombre_analista') == $a->nombre ? 'selected' : '' }}>
+                                                {{ $a->nombre }}
                                             </option>
                                         @endforeach
                                     @endif
                                 </select>
-                                <div class="form-text text-muted small">Selecciona el analista o usa tu sesión actual.</div>
+                                <div class="form-text text-muted small">Seleccione el analista responsable.</div>
                             @endif
                         </div>
                         <div class="col-md-6">
@@ -55,16 +55,16 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Energiza? *</label>
                             <select name="energiza" id="energiza" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('energiza', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('energiza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('energiza') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('energiza') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Da video? *</label>
                             <select name="da_video" id="da_video" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('da_video', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('da_video') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('da_video') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('da_video') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
@@ -72,16 +72,16 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Detecta disco? *</label>
                             <select name="detecta_disco" id="detecta_disco" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('detecta_disco', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('detecta_disco') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('detecta_disco') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('detecta_disco') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Ingresó a la BIOS? *</label>
                             <select name="ingreso_bios" id="ingreso_bios" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si" {{ old('ingreso_bios', 'Si') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="" disabled {{ old('ingreso_bios') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('ingreso_bios') == 'Si' ? 'selected' : '' }}>Si</option>
                                 <option value="No" {{ old('ingreso_bios') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
@@ -89,15 +89,15 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Se aplicó pasta térmica? *</label>
                             <select name="pasta_termica" id="pasta_termica" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
+                                <option value="" disabled {{ old('pasta_termica') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                 <option value="Si" {{ old('pasta_termica') == 'Si' ? 'selected' : '' }}>Si</option>
-                                <option value="No" {{ old('pasta_termica', 'No') == 'No' ? 'selected' : '' }}>No</option>
+                                <option value="No" {{ old('pasta_termica') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">La máquina contenía: *</label>
                             <select name="maquina_contenia" id="maquina_contenia" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
+                                <option value="" disabled {{ old('maquina_contenia') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                 <option value="Polvo" {{ old('maquina_contenia') == 'Polvo' ? 'selected' : '' }}>Polvo</option>
                                 <option value="Cucaracha" {{ old('maquina_contenia') == 'Cucaracha' ? 'selected' : '' }}>Cucaracha</option>
                                 <option value="Papeles de comida" {{ old('maquina_contenia') == 'Papeles de comida' ? 'selected' : '' }}>Papeles de comida</option>
@@ -109,9 +109,9 @@
                         <div class="col-12 d-none" id="contenedor_gel_cucarachas">
                             <label class="form-label fw-bold"><i class="fa-solid fa-shield-virus text-warning me-1"></i> ¿Se aplicó gel para cucarachas? *</label>
                             <select name="gel_cucarachas" id="gel_cucarachas" class="form-select">
-                                <option value="" disabled selected>-- Seleccione --</option>
+                                <option value="" disabled {{ old('gel_cucarachas') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                 <option value="Si" {{ old('gel_cucarachas') == 'Si' ? 'selected' : '' }}>Si</option>
-                                <option value="No" {{ old('gel_cucarachas', 'No') == 'No' ? 'selected' : '' }}>No</option>
+                                <option value="No" {{ old('gel_cucarachas') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
 

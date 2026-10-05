@@ -30,6 +30,14 @@ class Usuario extends Authenticatable
     ];
 
     /**
+     * Accessor para compatibilidad con auth()->user()->name
+     */
+    public function getNameAttribute()
+    {
+        return $this->nombre;
+    }
+
+    /**
      * Equipos analizados por este usuario
      */
     public function equipos()
@@ -100,12 +108,36 @@ class Usuario extends Authenticatable
      */
     public function tienePermiso($slug)
     {
-        // Revisar si tiene el permiso asignado directamente
+        // Aliases y compatibilidad retroactiva
+        $aliasMap = [
+            'cpus.ver'       => 'cpus.ver_bitacora',
+            'portatiles.ver' => 'portatiles.ver_bitacora',
+            'soplado.ver'    => 'soplado.ver_bitacora',
+        ];
+
+        if (isset($aliasMap[$slug])) {
+            $slug = $aliasMap[$slug];
+        }
+
+        // Consultas genéricas heredadas
+        if ($slug === 'bitacora.ver') {
+            return $this->tienePermiso('cpus.ver_bitacora') 
+                || $this->tienePermiso('portatiles.ver_bitacora') 
+                || $this->tienePermiso('soplado.ver_bitacora');
+        }
+
+        if ($slug === 'diagnostico.registrar') {
+            return $this->tienePermiso('cpus.registrar') 
+                || $this->tienePermiso('portatiles.registrar') 
+                || $this->tienePermiso('soplado.registrar');
+        }
+
+        // 1. Revisar si tiene el permiso asignado directamente
         if ($this->permisosRelation()->where('slug', $slug)->exists()) {
             return true;
         }
 
-        // Revisar a través de sus roles
+        // 2. Revisar a través de sus roles
         foreach ($this->rolesRelation()->get() as $rol) {
             if ($rol->permisos()->where('slug', $slug)->exists()) {
                 return true;

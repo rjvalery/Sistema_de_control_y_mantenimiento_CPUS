@@ -4,36 +4,17 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Rol;
-use App\Models\Permiso;
 use App\Models\Usuario;
+use App\Services\RbacService;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Crear Permisos
-        $permisos = [
-            // Gestión de Usuarios
-            ['nombre' => 'Ver Usuarios', 'slug' => 'usuarios.ver', 'modulo' => 'Usuarios'],
-            ['nombre' => 'Crear Usuarios', 'slug' => 'usuarios.crear', 'modulo' => 'Usuarios'],
-            ['nombre' => 'Editar Usuarios', 'slug' => 'usuarios.editar', 'modulo' => 'Usuarios'],
-            
-            // Diagnóstico y Mantenimiento
-            ['nombre' => 'Registrar Diagnóstico', 'slug' => 'diagnostico.registrar', 'modulo' => 'Diagnóstico'],
-            ['nombre' => 'Ver Bitácora', 'slug' => 'bitacora.ver', 'modulo' => 'Bitácora'],
-            
-            // Cargue Masivo
-            ['nombre' => 'Acceder Cargue Masivo', 'slug' => 'inventario.cargue_masivo', 'modulo' => 'Inventario'],
-            
-            // Acciones Avanzadas (Borrar, Editar histórico)
-            ['nombre' => 'Eliminar Registros', 'slug' => 'registros.eliminar', 'modulo' => 'Sistema'],
-        ];
+        // 1. Crear y unificar catálogo canónico de permisos
+        RbacService::sincronizarCatalogo();
 
-        foreach ($permisos as $p) {
-            Permiso::firstOrCreate(['slug' => $p['slug']], $p);
-        }
-
-        // 2. Crear Roles
+        // 2. Crear Roles si no existen
         $rolAdmin = Rol::firstOrCreate(
             ['slug' => 'admin'],
             ['nombre' => 'Administrador', 'descripcion' => 'Acceso total al sistema']
@@ -49,31 +30,15 @@ class RolesAndPermissionsSeeder extends Seeder
             ['nombre' => 'Supervisor / Auditor', 'descripcion' => 'Acceso de solo lectura y reportes']
         );
 
-        // 3. Asignar Permisos a Roles
-        // Admin tiene todos los permisos
-        $rolAdmin->permisos()->sync(Permiso::all());
-        
-        // Técnico tiene permisos operativos básicos
-        $permisosTecnico = Permiso::whereIn('slug', [
-            'diagnostico.registrar',
-            'bitacora.ver'
-        ])->get();
-        $rolTecnico->permisos()->sync($permisosTecnico);
+        // 3. Asignar todos los permisos al Administrador
+        $rolAdmin->permisos()->sync(\App\Models\Permiso::all());
 
-        // Auditor tiene permisos de vista
-        $permisosAuditor = Permiso::whereIn('slug', [
-            'bitacora.ver',
-            'usuarios.ver'
-        ])->get();
-        $rolAuditor->permisos()->sync($permisosAuditor);
-
-        // 4. Migrar usuarios existentes: asignar el rol basado en su columna string 'rol'
+        // 4. Migrar usuarios existentes: asignar rol basado en su campo 'rol'
         $usuarios = Usuario::all();
         foreach ($usuarios as $user) {
             $slug = strtolower($user->rol); // 'admin' o 'analista'
             $rol = Rol::where('slug', $slug)->first();
             if ($rol) {
-                // Sincronizar (evitar duplicados)
                 $user->rolesRelation()->syncWithoutDetaching([$rol->id]);
             }
         }

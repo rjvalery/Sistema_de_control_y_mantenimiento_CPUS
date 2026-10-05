@@ -34,9 +34,34 @@ class GarantiaPortatil extends Model
         'motivo_baja',
         'serial_disco',
         'foto_ruta',
+        'foto_equipo',
+        'evidencia',
         'created_at',
         'fecha_creacion',
     ];
+
+    /**
+     * Mapeo de evidencia y foto_equipo al campo foto_ruta.
+     */
+    public function setEvidenciaAttribute($value)
+    {
+        $this->attributes['foto_ruta'] = $value;
+    }
+
+    public function getEvidenciaAttribute()
+    {
+        return $this->attributes['foto_ruta'] ?? null;
+    }
+
+    public function setFotoEquipoAttribute($value)
+    {
+        $this->attributes['foto_ruta'] = $value;
+    }
+
+    public function getFotoEquipoAttribute()
+    {
+        return $this->attributes['foto_ruta'] ?? null;
+    }
 
     protected $casts = [
         'created_at' => 'datetime',

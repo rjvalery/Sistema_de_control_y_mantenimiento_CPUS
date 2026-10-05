@@ -52,14 +52,9 @@ function evaluarGestion() {
         document.getElementById('seccion_novedad')?.classList.remove('d-none');
     } else if (valor === 'Baja') {
         document.getElementById('seccion_baja')?.classList.remove('d-none');
-        const selUbicacion = document.getElementById('ubicacion_destino');
-        if (selUbicacion && !selUbicacion.value) {
-            selUbicacion.value = 'Sala Bajas';
-        }
     } else if (valor === 'IT') {
         document.getElementById('seccion_it')?.classList.remove('d-none');
-    } else {
-        // Diagnóstico por defecto o seleccionado
+    } else if (valor === 'Diagnostico') {
         document.getElementById('seccion_diagnostico_campos')?.classList.remove('d-none');
     }
 
@@ -202,7 +197,13 @@ async function enviarFormulario() {
     const formData = new FormData(form);
     const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
+    const placaVal = document.getElementById('placa_id')?.value?.trim() || '';
+    formData.set('placa', placaVal);
+    formData.set('placa_id', placaVal);
+
     if (fotoOptimBlob) {
+        formData.set('evidencia', fotoOptimBlob, 'foto_diagnostico.jpg');
+        formData.set('foto', fotoOptimBlob, 'foto_diagnostico.jpg');
         formData.set('foto_equipo', fotoOptimBlob, 'foto_diagnostico.jpg');
     }
 

@@ -202,38 +202,6 @@
             </div>
         </div>
     </div>
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        <!-- Slicer 1: Periodo -->
-        <div class="d-flex align-items-center gap-1">
-            <label for="filtroPeriodoSelect" class="small fw-semibold text-secondary mb-0 d-none d-md-inline-flex align-items-center gap-1">
-                <i class="fa-solid fa-calendar-days text-muted"></i>
-            </label>
-            <select id="filtroPeriodoSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(this.value, null, 1)">
-                <option value="dia" {{ ($periodo === 'dia') ? 'selected' : '' }}>Hoy</option>
-                <option value="semana" {{ ($periodo === 'semana') ? 'selected' : '' }}>Esta Semana</option>
-                <option value="mes" {{ ($periodo === 'mes') ? 'selected' : '' }}>Este Mes</option>
-                <option value="anio" {{ ($periodo === 'anio') ? 'selected' : '' }}>Este Año</option>
-                <option value="todos" {{ ($periodo === 'todos') ? 'selected' : '' }}>Histórico Completo</option>
-            </select>
-        </div>
-
-        <!-- Slicer 2: Analista Técnico -->
-        <div class="d-flex align-items-center gap-1">
-            <label for="filtroAnalistaSelect" class="small fw-semibold text-secondary mb-0 d-none d-md-inline-flex align-items-center gap-1">
-                <i class="fa-solid fa-user-gear text-muted"></i>
-            </label>
-            <select id="filtroAnalistaSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(null, this.value, 1)" style="min-width: 180px;">
-                <option value="todos">Todos los Analistas</option>
-                @if (!empty($analistas))
-                    @foreach ($analistas as $a)
-                        <option value="{{ $a['id'] }}" {{ ($analista_id == $a['id']) ? 'selected' : '' }}>
-                            {{ $a['nombre'] }}
-                        </option>
-                    @endforeach
-                @endif
-            </select>
-        </div>
-    </div>
 </div>
 
 <!-- 2. FILA SUPERIOR DE KPIS (TARJETAS ESTILO POWER BI CARD) -->
@@ -403,13 +371,29 @@
 
 <!-- 4. TABLA ANALÍTICA INFERIOR (ESTILO MATRIZ DE POWER BI) -->
 <div class="pbi-widget mb-4">
-    <div class="pbi-widget-header">
+    <div class="pbi-widget-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
         <div>
-            <h2 class="pbi-widget-title">Matriz Analítica de Máquinas Intervenidas</h2>
+            <h2 class="pbi-widget-title text-uppercase m-0">MATRIZ ANALÍTICA DE MÁQUINAS INTERVENIDAS</h2>
             <div class="text-muted" style="font-size: 0.72rem;">Registro cronológico y auditoría técnica de equipos atendidos</div>
         </div>
-        <div class="text-muted" style="font-size: 0.75rem;">
-            Total: <strong id="tablaCountBadge" class="text-dark">{{ $total_registros ?? count($maquinasIntervenidas) }}</strong> máquinas intervenidas
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Selector de Período Reubicado -->
+            <div class="d-flex align-items-center gap-1">
+                <label for="filtroPeriodoMatrizSelect" class="small fw-semibold text-secondary mb-0 d-none d-sm-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-calendar-days text-muted"></i>
+                </label>
+                <select id="filtroPeriodoMatrizSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(this.value, null, 1)">
+                    <option value="dia" {{ $periodo === 'dia' ? 'selected' : '' }}>Hoy</option>
+                    <option value="semana" {{ $periodo === 'semana' ? 'selected' : '' }}>Esta Semana</option>
+                    <option value="mes" {{ $periodo === 'mes' ? 'selected' : '' }}>Este Mes</option>
+                    <option value="anio" {{ $periodo === 'anio' ? 'selected' : '' }}>Este Año</option>
+                    <option value="todos" {{ $periodo === 'todos' ? 'selected' : '' }}>Histórico Completo</option>
+                </select>
+            </div>
+            <!-- Contador Dinámico de Máquinas Intervenidas -->
+            <span class="badge bg-light text-secondary border px-3 py-2 fw-normal text-nowrap" style="font-size: 0.8rem;">
+                Total: <strong id="tablaCountBadge" class="text-dark">{{ $maquinasIntervenidas->total() }}</strong> máquinas intervenidas
+            </span>
         </div>
     </div>
 
@@ -492,20 +476,27 @@
         </table>
     </div>
 
-    <!-- Paginación compacta estilo Power BI -->
+    <!-- Paginación compacta estilo Power BI con Query Strings consistentes -->
     <div class="pbi-widget-footer p-2 px-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-radius: 0 0 8px 8px;">
         <div class="text-muted small" style="font-size: 0.75rem;">
             <span id="pagiInfoText">
-                Mostrando página <strong id="pagiCurrentPage">{{ $pagina_actual ?? 1 }}</strong> de <strong id="pagiTotalPages">{{ $total_paginas ?? 1 }}</strong> (<span id="pagiTotalReg">{{ $total_registros ?? count($maquinasIntervenidas) }}</span> registros)
+                Mostrando página <strong id="pagiCurrentPage">{{ $maquinasIntervenidas->currentPage() }}</strong> de <strong id="pagiTotalPages">{{ $maquinasIntervenidas->lastPage() }}</strong> (<span id="pagiTotalReg">{{ $maquinasIntervenidas->total() }}</span> registros)
             </span>
         </div>
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiPrev" onclick="cambiarPagina(paginaActual - 1)" {{ (($pagina_actual ?? 1) <= 1) ? 'disabled' : '' }}>
-                <i class="fa-solid fa-chevron-left me-1"></i> Anterior
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiNext" onclick="cambiarPagina(paginaActual + 1)" {{ (($pagina_actual ?? 1) >= ($total_paginas ?? 1)) ? 'disabled' : '' }}>
-                Siguiente <i class="fa-solid fa-chevron-right ms-1"></i>
-            </button>
+        <div class="d-flex align-items-center gap-2">
+            @if ($maquinasIntervenidas->hasPages())
+                <div class="d-none">
+                    {{ $maquinasIntervenidas->withQueryString()->links() }}
+                </div>
+            @endif
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiPrev" onclick="cambiarPagina(paginaActual - 1)" {{ ($maquinasIntervenidas->currentPage() <= 1) ? 'disabled' : '' }}>
+                    <i class="fa-solid fa-chevron-left me-1"></i> Anterior
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiNext" onclick="cambiarPagina(paginaActual + 1)" {{ ($maquinasIntervenidas->currentPage() >= $maquinasIntervenidas->lastPage()) ? 'disabled' : '' }}>
+                    Siguiente <i class="fa-solid fa-chevron-right ms-1"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -520,9 +511,9 @@ let chartLineas = null;
 let chartCumplimientoInst = null;
 let periodoActual = '{{ $periodo }}';
 let analistaActual = '{{ $analista_id ?? 'todos' }}';
-let paginaActual = {{ $pagina_actual ?? 1 }};
-let totalPaginas = {{ $total_paginas ?? 1 }};
-let totalRegistros = {{ $total_registros ?? count($maquinasIntervenidas) }};
+let paginaActual = {{ $maquinasIntervenidas->currentPage() }};
+let totalPaginas = {{ $maquinasIntervenidas->lastPage() }};
+let totalRegistros = {{ $maquinasIntervenidas->total() }};
 
 // Configuración inicial de datos analíticos
 const dataAnalytics = {
@@ -674,6 +665,8 @@ function aplicarFiltros(nuevoPeriodo = null, nuevoAnalista = null, nuevaPagina =
     if (nuevoPeriodo !== null) {
         periodoActual = nuevoPeriodo;
         paginaActual = 1;
+        const sMatriz = document.getElementById('filtroPeriodoMatrizSelect');
+        if (sMatriz && sMatriz.value !== periodoActual) sMatriz.value = periodoActual;
     }
     if (nuevoAnalista !== null) {
         analistaActual = nuevoAnalista;
@@ -724,13 +717,9 @@ function aplicarFiltros(nuevoPeriodo = null, nuevoAnalista = null, nuevaPagina =
             }
         }
 
-        const selectPeriodo = document.getElementById('filtroPeriodoSelect');
-        if (selectPeriodo && selectPeriodo.value !== periodoActual) {
-            selectPeriodo.value = periodoActual;
-        }
-        const selectAnalista = document.getElementById('filtroAnalistaSelect');
-        if (selectAnalista && selectAnalista.value !== analistaActual) {
-            selectAnalista.value = analistaActual;
+        const selectPeriodoMatriz = document.getElementById('filtroPeriodoMatrizSelect');
+        if (selectPeriodoMatriz && selectPeriodoMatriz.value !== periodoActual) {
+            selectPeriodoMatriz.value = periodoActual;
         }
 
         const kpiCargados = document.getElementById('kpiTotalCargados');

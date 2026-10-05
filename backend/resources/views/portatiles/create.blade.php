@@ -24,16 +24,16 @@
                                 <div class="form-text text-muted small"><i class="fa-solid fa-lock me-1 text-success"></i>Sincronizado automáticamente con tu sesión activa.</div>
                             @else
                                 <select name="nombre_analista" id="nombre_analista" class="form-select" required>
-                                    <option value="" disabled selected>-- Seleccione Analista --</option>
+                                    <option value="" disabled {{ old('nombre_analista') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                     @if(!empty($analistas))
                                         @foreach ($analistas as $a)
-                                            <option value="{{ $a->nombre }}" {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? 'selected' : '' }}>
-                                                {{ $a->nombre }} {{ (auth()->user() && auth()->user()->nombre === $a->nombre) ? '(Tu sesión)' : '' }}
+                                            <option value="{{ $a->nombre }}" {{ old('nombre_analista') == $a->nombre ? 'selected' : '' }}>
+                                                {{ $a->nombre }}
                                             </option>
                                         @endforeach
                                     @endif
                                 </select>
-                                <div class="form-text text-muted small">Selecciona el analista o usa tu sesión actual.</div>
+                                <div class="form-text text-muted small">Seleccione el analista responsable.</div>
                             @endif
                         </div>
                         <div class="col-md-6">
@@ -54,7 +54,8 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Tipo de gestión *</label>
                             <select name="tipo_gestion" id="tipo_gestion" class="form-select" required>
-                                <option value="Diagnostico" {{ old('tipo_gestion', 'Diagnostico') == 'Diagnostico' ? 'selected' : '' }}>Diagnóstico</option>
+                                <option value="" disabled {{ old('tipo_gestion') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Diagnostico" {{ old('tipo_gestion') == 'Diagnostico' ? 'selected' : '' }}>Diagnóstico</option>
                                 <option value="Mantenimiento" {{ old('tipo_gestion') == 'Mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
                                 <option value="Baja" {{ old('tipo_gestion') == 'Baja' ? 'selected' : '' }}>Baja</option>
                             </select>
@@ -63,39 +64,39 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Energiza? *</label>
                             <select name="energiza" id="energiza" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si">Si</option>
-                                <option value="No">No</option>
+                                <option value="" disabled {{ old('energiza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('energiza') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="No" {{ old('energiza') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Da video? *</label>
                             <select name="da_video" id="da_video" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si">Si</option>
-                                <option value="No">No</option>
+                                <option value="" disabled {{ old('da_video') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('da_video') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="No" {{ old('da_video') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold">¿Realizó test Lenovo? *</label>
                             <select name="realizo_test_lenovo" id="realizo_test_lenovo" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Si">Si</option>
-                                <option value="No">No</option>
+                                <option value="" disabled {{ old('realizo_test_lenovo') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Si" {{ old('realizo_test_lenovo') == 'Si' ? 'selected' : '' }}>Si</option>
+                                <option value="No" {{ old('realizo_test_lenovo') == 'No' ? 'selected' : '' }}>No</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Estado actual del equipo *</label>
                             <select name="estado_actual_equipo" id="estado_actual_equipo" class="form-select" required onchange="evaluarEstadoEquipo(this.value)">
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Funcional">Funcional</option>
-                                <option value="Garantia">Garantía</option>
-                                <option value="Novedad">Novedad</option>
-                                <option value="Pendiente repuesto">Pendiente repuesto</option>
-                                <option value="Reparado">Reparado</option>
-                                <option value="Baja">Baja</option>
-                                <option value="Donacion">Donación</option>
+                                <option value="" disabled {{ old('estado_actual_equipo') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                <option value="Funcional" {{ old('estado_actual_equipo') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
+                                <option value="Garantia" {{ old('estado_actual_equipo') == 'Garantia' ? 'selected' : '' }}>Garantía</option>
+                                <option value="Novedad" {{ old('estado_actual_equipo') == 'Novedad' ? 'selected' : '' }}>Novedad</option>
+                                <option value="Pendiente repuesto" {{ old('estado_actual_equipo') == 'Pendiente repuesto' ? 'selected' : '' }}>Pendiente repuesto</option>
+                                <option value="Reparado" {{ old('estado_actual_equipo') == 'Reparado' ? 'selected' : '' }}>Reparado</option>
+                                <option value="Baja" {{ old('estado_actual_equipo') == 'Baja' ? 'selected' : '' }}>Baja</option>
+                                <option value="Donacion" {{ old('estado_actual_equipo') == 'Donacion' ? 'selected' : '' }}>Donación</option>
                             </select>
                         </div>
 
@@ -113,7 +114,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Garantía *</label>
                                         <select name="garantia" id="garantia" class="form-select">
-                                            <option value="">-- Seleccione Cobertura --</option>
+                                            <option value="" disabled {{ old('garantia') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Aplica" {{ old('garantia') == 'Aplica' ? 'selected' : '' }}>Aplica</option>
                                             <option value="No Aplica" {{ old('garantia') == 'No Aplica' ? 'selected' : '' }}>No Aplica</option>
                                             <option value="En trámite" {{ old('garantia') == 'En trámite' ? 'selected' : '' }}>En trámite</option>
@@ -181,7 +182,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Origen de la pieza</label>
                                         <select name="origen_pieza" id="origen_pieza" class="form-select">
-                                            <option value="">-- Seleccione --</option>
+                                            <option value="" disabled {{ old('origen_pieza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Nuevo" {{ old('origen_pieza') == 'Nuevo' ? 'selected' : '' }}>Nuevo</option>
                                             <option value="Reacondicionado" {{ old('origen_pieza') == 'Reacondicionado' ? 'selected' : '' }}>Reacondicionado</option>
                                             <option value="Garantía Lenovo" {{ old('origen_pieza') == 'Garantía Lenovo' ? 'selected' : '' }}>Garantía Lenovo</option>
@@ -202,7 +203,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Motivo de baja *</label>
                                         <select name="motivo_baja" id="motivo_baja" class="form-select">
-                                            <option value="" disabled selected>-- Seleccione motivo --</option>
+                                            <option value="" disabled {{ old('motivo_baja') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Obsoleto" {{ old('motivo_baja') == 'Obsoleto' ? 'selected' : '' }}>Obsoleto</option>
                                             <option value="Baja total" {{ old('motivo_baja') == 'Baja total' ? 'selected' : '' }}>Baja total</option>
                                         </select>
@@ -228,9 +229,9 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">¿Quién realizó la reparación? *</label>
                                         <select name="reparado_por" id="reparado_por" class="form-select">
-                                            <option value="" disabled selected>-- Seleccione quién reparó --</option>
-                                            <option value="Analista">Analista</option>
-                                            <option value="Lenovo">Lenovo</option>
+                                            <option value="" disabled {{ old('reparado_por') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                            <option value="Analista" {{ old('reparado_por') == 'Analista' ? 'selected' : '' }}>Analista</option>
+                                            <option value="Lenovo" {{ old('reparado_por') == 'Lenovo' ? 'selected' : '' }}>Lenovo</option>
                                         </select>
                                     </div>
                                     <div class="col-12">
@@ -246,7 +247,7 @@
                             <div class="p-3 bg-white rounded border">
                                 <label class="form-label fw-bold"><i class="fa-solid fa-flag-checkered text-primary me-2"></i>Estado Final del Equipo (Opcional)</label>
                                 <select name="estado_final_equipo" id="estado_final_equipo" class="form-select">
-                                    <option value="">-- Seleccione Estado Final --</option>
+                                    <option value="" disabled {{ old('estado_final_equipo') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                     <option value="Funcional" {{ old('estado_final_equipo') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
                                     <option value="Reparado por Analista" {{ old('estado_final_equipo') == 'Reparado por Analista' ? 'selected' : '' }}>Reparado por Analista</option>
                                     <option value="Reparado por Lenovo" {{ old('estado_final_equipo') == 'Reparado por Lenovo' ? 'selected' : '' }}>Reparado por Lenovo</option>

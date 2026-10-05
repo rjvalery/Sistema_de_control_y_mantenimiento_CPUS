@@ -5,7 +5,9 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-bold"><i class="fa-solid fa-wind me-2 text-info"></i>Bitácora de Soplado y Mantenimiento</h5>
+        @can('soplado.registrar')
         <a href="{{ route('soplado.create') }}" class="btn btn-info btn-sm text-white"><i class="fa-solid fa-plus me-1"></i> Nuevo Registro</a>
+        @endcan
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('soplado.index') }}" class="row g-2 mb-4 align-items-center">
@@ -73,8 +75,8 @@
                         </td>
                         <td><span class="badge bg-secondary-subtle text-secondary">{{ $row->maquina_contenia ?: 'Normal' }}</span></td>
                         <td class="text-center">
-                            @if(!empty($row->foto_ruta))
-                                <a href="{{ route('evidencias.show', ['path' => $row->foto_ruta]) }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2" title="Ver Evidencia Fotográfica">
+                            @if(!empty($row->foto_ruta) || !empty($row->evidencia))
+                                <a href="{{ \App\Services\UploadService::routeEvidencia($row->foto_ruta ?? $row->evidencia, 'soplado', $row->created_at ?? $row->fecha_creacion, $row->placa_id) }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2" title="Ver Evidencia Fotográfica">
                                     <i class="fa-solid fa-image"></i>
                                 </a>
                             @else

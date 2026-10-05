@@ -30,29 +30,36 @@ Route::middleware('auth')->group(function () {
         Route::get('/inventario/sincronizar', [\App\Http\Controllers\CargueMasivoController::class, 'sincronizar'])->name('inventario.sincronizar');
     });
 
-    // Visor seguro de evidencias
+    // Visor seguro de evidencias técnicas
+    Route::get('/evidencias/ver/{modulo}/{anio}/{mes}/{dia}/{archivo}', [\App\Http\Controllers\EvidenciaController::class, 'ver'])->name('evidencias.ver');
     Route::get('/evidencias/{path}', [\App\Http\Controllers\EvidenciaController::class, 'show'])
         ->where('path', '.*')
         ->name('evidencias.show');
 
-    // Equipos
-    Route::get('/equipos/formulario', [EquiposController::class, 'create'])->name('equipos.create');
-    Route::post('/equipos/guardar', [EquiposController::class, 'store'])->name('equipos.store');
-    Route::get('/equipos/bitacora', [EquiposController::class, 'index'])->name('equipos.index');
+    // Diagnóstico CPUs (Protegido por RBAC)
+    Route::get('/equipos/bitacora', [EquiposController::class, 'index'])->middleware('can:cpus.ver_bitacora')->name('equipos.index');
+    Route::middleware('can:cpus.registrar')->group(function () {
+        Route::get('/equipos/formulario', [EquiposController::class, 'create'])->name('equipos.create');
+        Route::post('/equipos/guardar', [EquiposController::class, 'store'])->name('equipos.store');
+    });
 
-    // Soplado
-    Route::get('/soplado/formulario', [SopladoController::class, 'create'])->name('soplado.create');
-    Route::get('/soplado/ultimo-registro', [SopladoController::class, 'ultimoRegistro'])->name('soplado.ultimo_registro');
-    Route::post('/soplado/guardar', [SopladoController::class, 'store'])->name('soplado.store');
-    Route::get('/soplado/bitacora', [SopladoController::class, 'index'])->name('soplado.index');
+    // Mantenimiento / Soplado (Protegido por RBAC)
+    Route::get('/soplado/bitacora', [SopladoController::class, 'index'])->middleware('can:soplado.ver_bitacora')->name('soplado.index');
+    Route::middleware('can:soplado.registrar')->group(function () {
+        Route::get('/soplado/formulario', [SopladoController::class, 'create'])->name('soplado.create');
+        Route::get('/soplado/ultimo-registro', [SopladoController::class, 'ultimoRegistro'])->name('soplado.ultimo_registro');
+        Route::post('/soplado/guardar', [SopladoController::class, 'store'])->name('soplado.store');
+    });
 
-    // Portatiles
-    Route::get('/portatiles/formulario', [PortatilesController::class, 'create'])->name('portatiles.create');
-    Route::get('/portatiles/ultimo-registro', [PortatilesController::class, 'ultimoRegistro'])->name('portatiles.ultimo_registro');
-    Route::get('/portatiles/evidencia', [PortatilesController::class, 'evidencia'])->name('portatiles.evidencia');
-    Route::post('/portatiles/guardar-evidencia', [PortatilesController::class, 'guardarEvidencia'])->name('portatiles.guardarEvidencia');
-    Route::post('/portatiles/guardar', [PortatilesController::class, 'store'])->name('portatiles.store');
-    Route::get('/portatiles/bitacora', [PortatilesController::class, 'index'])->name('portatiles.index');
+    // Diagnóstico Portátiles (Protegido por RBAC)
+    Route::get('/portatiles/bitacora', [PortatilesController::class, 'index'])->middleware('can:portatiles.ver_bitacora')->name('portatiles.index');
+    Route::middleware('can:portatiles.registrar')->group(function () {
+        Route::get('/portatiles/formulario', [PortatilesController::class, 'create'])->name('portatiles.create');
+        Route::get('/portatiles/ultimo-registro', [PortatilesController::class, 'ultimoRegistro'])->name('portatiles.ultimo_registro');
+        Route::get('/portatiles/evidencia', [PortatilesController::class, 'evidencia'])->name('portatiles.evidencia');
+        Route::post('/portatiles/guardar-evidencia', [PortatilesController::class, 'guardarEvidencia'])->name('portatiles.guardarEvidencia');
+        Route::post('/portatiles/guardar', [PortatilesController::class, 'store'])->name('portatiles.store');
+    });
 
     // Usuarios (Gestión RBAC protegida a nivel de ruta)
     Route::middleware('can:usuarios.ver')->group(function () {

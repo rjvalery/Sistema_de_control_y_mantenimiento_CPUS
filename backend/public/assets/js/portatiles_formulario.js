@@ -197,6 +197,8 @@ function enviarFormulario() {
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando diagnóstico...';
 
     const formData = new FormData(form);
+    const placaVal = document.getElementById('placa_id_equipo')?.value?.trim() || '';
+    formData.set('placa', placaVal);
     const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     fetch(window.AppUrls.guardarPortatiles, {

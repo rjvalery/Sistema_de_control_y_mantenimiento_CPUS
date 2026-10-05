@@ -7,12 +7,21 @@ use App\Models\InventarioGeneral;
 use App\Http\Requests\StorePortatilRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use App\Services\UploadService;
 use Exception;
 
 class PortatilesController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+
+        // Verificación de permiso para consultar la bitácora de Portátiles
+        if (!$user || (!$user->can('portatiles.ver_bitacora') && !$user->hasRole('admin'))) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico Portátiles.');
+        }
+
         $busqueda = trim((string)$request->query('buscar'));
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
@@ -22,6 +31,11 @@ class PortatilesController extends Controller
         }
 
         $query = GarantiaPortatil::query();
+
+        // Filtro de privacidad: Si tiene activo 'Ver únicamente mis propios registros y dashboard personal'
+        if (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio')) {
+            $query->where('nombre_analista', $user->nombre);
+        }
 
         if ($busqueda) {
             $query->where(function($q) use ($busqueda) {
@@ -40,7 +54,9 @@ class PortatilesController extends Controller
         }
 
         $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
-        $totalGeneral = GarantiaPortatil::count();
+        $totalGeneral = (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio'))
+            ? GarantiaPortatil::where('nombre_analista', $user->nombre)->count()
+            : GarantiaPortatil::count();
 
         return view('portatiles.index', [
             'registros'      => $registros,
@@ -55,6 +71,10 @@ class PortatilesController extends Controller
 
     public function create()
     {
+        if (!auth()->user()->can('portatiles.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos diagnósticos de portátiles.');
+        }
+
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->orderBy('nombre')->get();
         return view('portatiles.create', compact('analistas'));
     }
@@ -84,10 +104,12 @@ class PortatilesController extends Controller
     {
         $request->validate([
             'placa_id_equipo' => 'required|string',
-            'foto_equipo' => 'required|image|max:5120'
+            'foto_equipo' => 'nullable|image|max:10240',
+            'evidencia' => 'nullable|image|max:10240',
+            'foto' => 'nullable|image|max:10240',
         ]);
 
-        $placa = $request->placa_id_equipo;
+        $placa = $request->placa_id_equipo ?? $request->placa;
         
         $registro = GarantiaPortatil::where('placa_id_equipo', $placa)
                         ->orderBy('id', 'desc')
@@ -100,13 +122,8 @@ class PortatilesController extends Controller
             ], 404);
         }
 
-        if ($request->hasFile('foto_equipo')) {
-            $fotoRuta = app(\App\Services\UploadService::class)->guardarEvidencia(
-                $request->file('foto_equipo'), 
-                $placa, 
-                'portatil'
-            );
-            
+        $fotoRuta = UploadService::procesarSubidaFisica($request, 'portatiles', $placa);
+        if ($fotoRuta) {
             $registro->foto_ruta = $fotoRuta;
             $registro->save();
 
@@ -124,14 +141,12 @@ class PortatilesController extends Controller
 
     public function store(StorePortatilRequest $request)
     {
-        $fotoRuta = null;
-        if ($request->hasFile('foto_equipo')) {
-            $fotoRuta = app(\App\Services\UploadService::class)->guardarEvidencia(
-                $request->file('foto_equipo'), 
-                $request->placa_id_equipo, 
-                'portatil'
-            );
+        if (!auth()->user()->can('portatiles.registrar') && !auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar intervenciones de portátiles.');
         }
+
+        $placa = $request->placa_id_equipo ?? $request->placa;
+        $fotoRuta = UploadService::procesarSubidaFisica($request, 'portatiles', $placa);
 
         $user = auth()->user();
         $nombreAnalista = ($user && $user->rol === 'analista') 
@@ -162,11 +177,11 @@ class PortatilesController extends Controller
         $garantia = ($estadoActual === 'Garantia') ? 'Aplica' : $request->garantia;
 
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $diagnosticoFinal, $garantia, $estadoFinal, $indiquePieza, $indiqueFru, $origenPieza) {
+            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $diagnosticoFinal, $garantia, $estadoFinal, $indiquePieza, $indiqueFru, $origenPieza, $placa) {
                 $data = [
                     'nombre_analista'                => $nombreAnalista,
                     'numero_traslado'                => $request->numero_traslado,
-                    'placa_id_equipo'                => $request->placa_id_equipo,
+                    'placa_id_equipo'                => $placa,
                     'tipo_gestion'                   => $request->tipo_gestion,
                     'energiza'                       => $request->energiza,
                     'da_video'                       => $request->da_video,
@@ -193,7 +208,7 @@ class PortatilesController extends Controller
                 GarantiaPortatil::create($data);
 
                 app(\App\Services\InventarioService::class)->marcarComoIntervenido(
-                    $request->placa_id_equipo,
+                    $placa,
                     'Diagnóstico Portátiles',
                     $nombreAnalista,
                     $request->numero_traslado
