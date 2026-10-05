@@ -68,7 +68,7 @@
                             @endif
                         </td>
                         <td>
-                            <span class="badge {{ $row->estado_actual === 'Funcional' ? 'bg-success' : ($row->estado_actual === 'Garantia' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                            <span class="badge {{ $row->estado_actual === 'Funcional' ? 'bg-success' : ($row->estado_actual === 'Garantia' ? 'bg-warning text-dark' : ($row->estado_actual === 'Baja' ? 'bg-danger text-white' : 'bg-secondary')) }}">
                                 {{ $row->estado_actual }}
                             </span>
                         </td>

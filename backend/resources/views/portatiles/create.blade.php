@@ -242,21 +242,6 @@
                             </div>
                         </div>
 
-                        <!-- Estado Final del Equipo (Global) -->
-                        <div class="col-md-12">
-                            <div class="p-3 bg-white rounded border">
-                                <label class="form-label fw-bold"><i class="fa-solid fa-flag-checkered text-primary me-2"></i>Estado Final del Equipo (Opcional)</label>
-                                <select name="estado_final_equipo" id="estado_final_equipo" class="form-select">
-                                    <option value="" disabled {{ old('estado_final_equipo') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
-                                    <option value="Funcional" {{ old('estado_final_equipo') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
-                                    <option value="Reparado por Analista" {{ old('estado_final_equipo') == 'Reparado por Analista' ? 'selected' : '' }}>Reparado por Analista</option>
-                                    <option value="Reparado por Lenovo" {{ old('estado_final_equipo') == 'Reparado por Lenovo' ? 'selected' : '' }}>Reparado por Lenovo</option>
-                                    <option value="Pendiente repuesto" {{ old('estado_final_equipo') == 'Pendiente repuesto' ? 'selected' : '' }}>Pendiente repuesto</option>
-                                    <option value="Para baja" {{ old('estado_final_equipo') == 'Para baja' ? 'selected' : '' }}>Para baja</option>
-                                    <option value="Donación" {{ old('estado_final_equipo') == 'Donación' ? 'selected' : '' }}>Donación</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <!-- Evidencia Fotográfica Opcional Directa -->
                         <div class="col-12">

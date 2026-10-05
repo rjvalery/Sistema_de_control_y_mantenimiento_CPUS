@@ -131,9 +131,7 @@ class EquiposController extends Controller
             ? $user->nombre 
             : ($request->nombre_analista ?: ($user->nombre ?? 'Sistema'));
 
-        $serialDisco = $request->serial_disco ?: $request->serial_disco_baja;
         $descripcionNovedad = $request->descripcion_novedad ?: $request->descripcion_it;
-
         $novedadIt = $request->novedad_it ?: $request->descripcion_it;
         $solucionGarantias = $request->solucion_garantias;
         $timestampRegistro = $request->timestamp_registro ?: now()->toDateTimeString();
@@ -144,9 +142,10 @@ class EquiposController extends Controller
         }
 
         $placaFinal = $request->placa_id ?? $request->placa;
+        $origenPieza = ($request->tipo_gestion === 'Intervencion') ? $request->origen_pieza : null;
 
         try {
-            DB::transaction(function () use ($request, $nombreArchivo, $nombreAnalista, $serialDisco, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir, $placaFinal) {
+            DB::transaction(function () use ($request, $nombreArchivo, $nombreAnalista, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir, $placaFinal, $origenPieza) {
                 $equipo = Equipo::create([
                     'timestamp_registro'  => $timestampRegistro,
                     'nombre_analista'     => $nombreAnalista,
@@ -157,14 +156,7 @@ class EquiposController extends Controller
                     'da_video'            => $request->da_video,
                     'estado_actual'       => $request->estado_actual,
                     'que_va_intervenir'   => $queVaIntervenir ?: null,
-                    'origen_pieza'        => $request->origen_pieza,
-                    'tipo_ram'            => $request->tipo_ram ?: null,
-                    'marca_ram'           => $request->marca_ram ?: null,
-                    'capacidad_ram'       => $request->capacidad_ram ?: null,
-                    'tipo_disco'          => $request->tipo_disco ?: null,
-                    'marca_disco'         => $request->marca_disco ?: null,
-                    'capacidad_disco'     => $request->capacidad_disco ?: null,
-                    'serial_disco'        => $serialDisco ?: null,
+                    'origen_pieza'        => $origenPieza,
                     'descripcion_novedad' => $descripcionNovedad ?: null,
                     'novedad_it'          => $novedadIt ?: null,
                     'solucion_garantias'  => $solucionGarantias ?: null,

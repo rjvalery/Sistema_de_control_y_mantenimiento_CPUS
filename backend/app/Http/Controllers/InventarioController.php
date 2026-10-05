@@ -75,7 +75,7 @@ class InventarioController extends Controller
                 'equipo'     => [
                     'id'                    => 0,
                     'placa_id'              => $historialEq->placa_id,
-                    'serial'                => $historialEq->serial_disco ?? '',
+                    'serial'                => $historialEq->placa_id ?? '',
                     'num_traslado'          => $historialEq->num_traslado,
                     'tipo_equipo'           => 'CPU / Escritorio',
                     'marca'                 => '',

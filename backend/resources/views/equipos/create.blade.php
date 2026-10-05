@@ -89,9 +89,10 @@
                             <label class="form-label fw-bold">Estado actual del equipo *</label>
                             <select name="estado_actual" id="estado_actual" class="form-select" required onchange="evaluarEstado(this.value)">
                                 <option value="" disabled {{ old('estado_actual') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
-                                <option value="Funcional" {{ old('estado_actual') == 'Funcional' ? 'selected' : '' }}>Funcional</option>
-                                <option value="Garantia" {{ old('estado_actual') == 'Garantia' ? 'selected' : '' }}>Garantía</option>
-                                <option value="Pendiente Repuesto" {{ old('estado_actual') == 'Pendiente Repuesto' ? 'selected' : '' }}>Pendiente Repuesto</option>
+                                <option value="Funcional" {{ old('estado_actual', $equipo->estado_actual ?? '') === 'Funcional' ? 'selected' : '' }}>Funcional</option>
+                                <option value="Garantia" {{ old('estado_actual', $equipo->estado_actual ?? '') === 'Garantia' ? 'selected' : '' }}>Garantía</option>
+                                <option value="Pendiente Repuesto" {{ old('estado_actual', $equipo->estado_actual ?? '') === 'Pendiente Repuesto' ? 'selected' : '' }}>Pendiente Repuesto</option>
+                                <option value="Baja" {{ old('estado_actual', $equipo->estado_actual ?? '') === 'Baja' ? 'selected' : '' }}>Baja</option>
                             </select>
                         </div>
 
@@ -126,66 +127,22 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">¿Qué va a intervenir? *</label>
-                                        <select name="que_va_intervenir" id="que_va_intervenir" class="form-select" onchange="evaluarIntervencion(this.value)">
+                                        <select name="que_va_intervenir" id="que_va_intervenir" class="form-select">
                                             <option value="" disabled {{ old('que_va_intervenir') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Disco" {{ old('que_va_intervenir') == 'Disco' ? 'selected' : '' }}>Disco Duro / SSD</option>
                                             <option value="RAM" {{ old('que_va_intervenir') == 'RAM' ? 'selected' : '' }}>Memoria RAM</option>
                                             <option value="Pila de BIOS" {{ old('que_va_intervenir') == 'Pila de BIOS' ? 'selected' : '' }}>Pila de BIOS</option>
-                                            <option value="Pasta Térmica" {{ old('que_va_intervenir') == 'Pasta Térmica' ? 'selected' : '' }}>Pasta Térmica</option>
                                             <option value="Disco;RAM" {{ old('que_va_intervenir') == 'Disco;RAM' ? 'selected' : '' }}>Disco y RAM</option>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Origen de pieza *</label>
                                         <select name="origen_pieza" id="origen_pieza" class="form-select">
-                                            <option value="" disabled {{ old('origen_pieza') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
+                                            <option value="" disabled {{ old('origen_pieza') === null ? 'selected' : '' }}>-- Seleccione origen de la pieza --</option>
                                             <option value="Nuevo" {{ old('origen_pieza') == 'Nuevo' ? 'selected' : '' }}>Nuevo</option>
+                                            <option value="Garantía" {{ old('origen_pieza') == 'Garantía' ? 'selected' : '' }}>Garantía</option>
                                             <option value="Reacondicionado" {{ old('origen_pieza') == 'Reacondicionado' ? 'selected' : '' }}>Reacondicionado</option>
                                         </select>
-                                    </div>
-
-                                    <!-- Campos RAM -->
-                                    <div id="campos_ram" class="col-12 d-none">
-                                        <div class="p-3 bg-white rounded border">
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Tipo de RAM</label>
-                                                    <input type="text" name="tipo_ram" id="tipo_ram" class="form-control" value="{{ old('tipo_ram') }}" placeholder="Ej: DDR4, DDR3">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Marca de RAM</label>
-                                                    <input type="text" name="marca_ram" id="marca_ram" class="form-control" value="{{ old('marca_ram') }}" placeholder="Ej: Kingston, Crucial">
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-bold">Capacidad RAM</label>
-                                                    <input type="text" name="capacidad_ram" id="capacidad_ram" class="form-control" value="{{ old('capacidad_ram') }}" placeholder="Ej: 8GB, 16GB">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Campos Disco -->
-                                    <div id="campos_disco" class="col-12 d-none">
-                                        <div class="p-3 bg-white rounded border">
-                                            <div class="row g-3">
-                                                <div class="col-md-3">
-                                                    <label class="form-label fw-bold">Tipo de Disco</label>
-                                                    <input type="text" name="tipo_disco" id="tipo_disco" class="form-control" value="{{ old('tipo_disco') }}" placeholder="Ej: SSD, HDD, NVMe">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label fw-bold">Marca Disco</label>
-                                                    <input type="text" name="marca_disco" id="marca_disco" class="form-control" value="{{ old('marca_disco') }}" placeholder="Ej: Western Digital">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label fw-bold">Capacidad Disco</label>
-                                                    <input type="text" name="capacidad_disco" id="capacidad_disco" class="form-control" value="{{ old('capacidad_disco') }}" placeholder="Ej: 500GB, 1TB">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label fw-bold">Serial del disco</label>
-                                                    <input type="text" name="serial_disco" id="serial_disco" class="form-control" value="{{ old('serial_disco') }}" placeholder="Escriba el serial...">
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

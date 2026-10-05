@@ -46,8 +46,6 @@ function evaluarGestion() {
 
     if (valor === 'Intervencion') {
         document.getElementById('seccion_intervencion')?.classList.remove('d-none');
-        const selInterv = document.getElementById('que_va_intervenir');
-        if (selInterv) evaluarIntervencion(selInterv.value);
     } else if (valor === 'Novedad') {
         document.getElementById('seccion_novedad')?.classList.remove('d-none');
     } else if (valor === 'Baja') {
@@ -70,17 +68,7 @@ function evaluarGestion() {
 }
 
 function evaluarIntervencion(valor) {
-    const camposRam = document.getElementById('campos_ram');
-    const camposDisco = document.getElementById('campos_disco');
-    if (camposRam) camposRam.classList.add('d-none');
-    if (camposDisco) camposDisco.classList.add('d-none');
-
-    if (valor === 'RAM' || valor === 'Disco;RAM') {
-        if (camposRam) camposRam.classList.remove('d-none');
-    }
-    if (valor === 'Disco' || valor === 'Disco;RAM') {
-        if (camposDisco) camposDisco.classList.remove('d-none');
-    }
+    // Ya no se requiere desglose técnico por componente (RAM/Disco)
 }
 
 function manejarSeleccionFoto(input) {

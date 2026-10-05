@@ -171,7 +171,7 @@ class PortatilesController extends Controller
 
         $estadoFinal = ($estadoActual === 'Reparado' && $reparadoPor) 
             ? "Reparado por $reparadoPor" 
-            : ($estadoActual === 'Donacion' ? 'Donación' : $request->estado_final_equipo);
+            : ($estadoActual === 'Donacion' ? 'Donación' : ($request->estado_final_equipo ?: $estadoActual));
 
         $origenPieza = ($estadoActual === 'Reparado' && $reparadoPor) ? $reparadoPor : $request->origen_pieza;
         $garantia = ($estadoActual === 'Garantia') ? 'Aplica' : $request->garantia;
