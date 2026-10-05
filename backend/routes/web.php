@@ -66,6 +66,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
         Route::post('/usuarios/crear', [UsuariosController::class, 'store'])->middleware('can:usuarios.crear')->name('usuarios.store');
         Route::post('/usuarios/editar', [UsuariosController::class, 'update'])->middleware('can:usuarios.editar')->name('usuarios.update');
+        Route::post('/usuarios/{id}/eliminar', [UsuariosController::class, 'destroy'])->middleware('can:usuarios.eliminar')->name('usuarios.destroy');
+        Route::delete('/usuarios/{id}', [UsuariosController::class, 'destroy'])->middleware('can:usuarios.eliminar');
         Route::get('/usuarios/{id}/permisos', [UsuariosController::class, 'permisos'])->middleware('can:usuarios.permisos')->name('usuarios.permisos');
         Route::post('/usuarios/{id}/permisos', [UsuariosController::class, 'guardarPermisos'])->middleware('can:usuarios.permisos')->name('usuarios.guardar_permisos');
     });

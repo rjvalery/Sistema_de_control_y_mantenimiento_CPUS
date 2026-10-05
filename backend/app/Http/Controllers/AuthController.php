@@ -32,7 +32,8 @@ class AuthController extends Controller
             Auth::login($usuario);
             RateLimiter::clear($key);
             $request->session()->regenerate();
-            return redirect()->intended('dashboard');
+            $request->session()->forget('url.intended');
+            return redirect()->route('dashboard');
         }
 
         RateLimiter::hit($key, 5 * 60);

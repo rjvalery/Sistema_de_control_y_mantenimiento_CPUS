@@ -82,13 +82,23 @@ class Usuario extends Authenticatable
      */
     public function hasRole($roleSlug)
     {
+        $adminAliases = ['admin', 'administrador', 'superadmin'];
+        if (in_array(strtolower($roleSlug), $adminAliases)) {
+            if ($this->rolesRelation()->whereIn('slug', $adminAliases)->exists()) {
+                return true;
+            }
+            if (in_array(strtolower((string)$this->rol), $adminAliases)) {
+                return true;
+            }
+        }
+
         // Revisar si existe en la relación de base de datos
         if ($this->rolesRelation()->where('slug', $roleSlug)->exists()) {
             return true;
         }
 
         // Compatibilidad hacia atrás con el campo 'rol' estático original
-        if ($this->rol === $roleSlug) {
+        if (strtolower((string)$this->rol) === strtolower($roleSlug)) {
             return true;
         }
 
@@ -108,6 +118,11 @@ class Usuario extends Authenticatable
      */
     public function tienePermiso($slug)
     {
+        // 0. Los usuarios con rol de administrador tienen todos los permisos sin restricción
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
         // Aliases y compatibilidad retroactiva
         $aliasMap = [
             'cpus.ver'       => 'cpus.ver_bitacora',
@@ -132,14 +147,14 @@ class Usuario extends Authenticatable
                 || $this->tienePermiso('soplado.registrar');
         }
 
-        // 1. Revisar si tiene el permiso asignado directamente
-        if ($this->permisosRelation()->where('slug', $slug)->exists()) {
+        // 1. Revisar si tiene el permiso asignado directamente (usando permisos.slug para evitar ambigüedad SQL)
+        if ($this->permisosRelation()->where('permisos.slug', $slug)->exists()) {
             return true;
         }
 
         // 2. Revisar a través de sus roles
         foreach ($this->rolesRelation()->get() as $rol) {
-            if ($rol->permisos()->where('slug', $slug)->exists()) {
+            if ($rol->permisos()->where('permisos.slug', $slug)->exists()) {
                 return true;
             }
         }

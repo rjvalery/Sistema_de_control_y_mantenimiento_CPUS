@@ -116,6 +116,11 @@ class RbacService
                     'descripcion' => 'Permite modificar datos de usuarios y resetear contraseñas'
                 ],
                 [
+                    'slug' => 'usuarios.eliminar',
+                    'nombre' => 'Eliminar usuarios',
+                    'descripcion' => 'Permite eliminar cuentas de usuario del sistema'
+                ],
+                [
                     'slug' => 'usuarios.permisos',
                     'nombre' => 'Permisos dinámicos',
                     'descripcion' => 'Permite asignar y revocar permisos individuales por usuario'

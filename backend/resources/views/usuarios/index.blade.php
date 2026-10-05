@@ -68,10 +68,19 @@
                                 </a>
                                 @endcan
                                 
-                                @can('registros.eliminar')
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar (No recomendado)">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                @can('usuarios.eliminar')
+                                    @if(auth()->id() !== $user->id)
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalEliminarUsuario{{ $user->id }}"
+                                            title="Eliminar Usuario">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    @else
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="No puedes eliminar tu propia cuenta">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    @endif
                                 @endcan
                             </td>
                         </tr>
@@ -130,6 +139,44 @@
                             </div>
                         </div>
                         @endcan
+
+                        <!-- Modal Eliminar Usuario -->
+                        @can('usuarios.eliminar')
+                        @if(auth()->id() !== $user->id)
+                        <div class="modal fade" id="modalEliminarUsuario{{ $user->id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Confirmar Eliminación</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ route('usuarios.destroy', $user->id) }}" method="POST">
+                                        @csrf
+                                        <div class="modal-body p-4 text-center">
+                                            <div class="display-6 text-danger mb-3">
+                                                <i class="fa-solid fa-circle-exclamation"></i>
+                                            </div>
+                                            <h6 class="fw-bold mb-2">¿Estás seguro de que deseas eliminar este usuario?</h6>
+                                            <p class="text-muted small mb-3">
+                                                Esta acción eliminará la cuenta de <strong>{{ $user->nombre }}</strong> (<code>{{ $user->usuario }}</code>) y cancelará todos sus accesos al sistema.
+                                            </p>
+                                            <div class="alert alert-warning py-2 small text-start mb-0">
+                                                <i class="fa-solid fa-info-circle me-1"></i>
+                                                <strong>Nota de trazabilidad:</strong> Los registros técnicos e intervenciones históricas asociados a este nombre se preservarán en las bitácoras para auditoría técnica.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-danger btn-sm fw-bold">
+                                                <i class="fa-solid fa-trash me-1"></i> Sí, Eliminar Usuario
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        @endcan
                     @empty
                         <tr>
                             <td colspan="5" class="text-center py-4 text-muted">
@@ -158,23 +205,23 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Nombre Completo *</label>
-                        <input type="text" name="nombre" class="form-control" required>
+                        <input type="text" name="nombre" class="form-control" value="{{ old('nombre') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Usuario de Login *</label>
-                        <input type="text" name="usuario" class="form-control" required autocomplete="off">
+                        <input type="text" name="usuario" class="form-control" value="{{ old('usuario') }}" required autocomplete="off">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Contraseña *</label>
-                        <input type="password" name="password" class="form-control" required minlength="8" autocomplete="new-password">
-                        <div class="form-text small">Mínimo 8 caracteres, al menos 1 letra y 1 número.</div>
+                        <input type="password" name="password" class="form-control" required minlength="6" autocomplete="new-password">
+                        <div class="form-text small">Mínimo 6 caracteres.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Rol Asignado *</label>
                         <select name="rol_id" class="form-select" required>
-                            <option value="" disabled selected>-- Seleccionar --</option>
+                            <option value="" disabled {{ old('rol_id') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                             @foreach($roles as $rol)
-                                <option value="{{ $rol->id }}">{{ $rol->nombre }} ({{ $rol->descripcion }})</option>
+                                <option value="{{ $rol->id }}" {{ old('rol_id') == $rol->id ? 'selected' : '' }}>{{ $rol->nombre }} ({{ $rol->descripcion }})</option>
                             @endforeach
                         </select>
                     </div>

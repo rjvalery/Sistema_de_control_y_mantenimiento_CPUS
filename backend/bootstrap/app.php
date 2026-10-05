@@ -20,4 +20,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No tienes permisos para realizar esta acción.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Acceso restringido: No cuentas con los permisos asignados para acceder a ese módulo.');
+        });
+
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, Request $request) {
+            if ($e->getStatusCode() === 403) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'No tienes permisos para realizar esta acción.'
+                    ], 403);
+                }
+                return redirect()->route('dashboard')->with('error', 'Acceso restringido: No cuentas con los permisos asignados para acceder a ese módulo.');
+            }
+        });
     })->create();

@@ -20,6 +20,9 @@ class UsuariosController extends Controller
     {
         Gate::authorize('has-permission', 'usuarios.ver');
 
+        // Garantizar catálogo RBAC al día
+        \App\Services\RbacService::sincronizarCatalogo();
+
         $busqueda = $request->query('buscar');
         $query = Usuario::with('rolesRelation');
 
@@ -92,6 +95,43 @@ class UsuariosController extends Controller
         $usuario->rolesRelation()->sync([$rolModel->id]);
 
         return redirect()->route('usuarios.index')->with('msg', 'Usuario actualizado exitosamente.');
+    }
+
+    /**
+     * Remove the specified user from storage.
+     */
+    public function destroy($id)
+    {
+        Gate::authorize('has-permission', 'usuarios.eliminar');
+
+        $usuario = Usuario::findOrFail($id);
+
+        // Seguridad: No permitir eliminarse a sí mismo
+        if (auth()->id() === $usuario->id) {
+            return back()->with('error', 'No puedes eliminar tu propia cuenta de usuario en sesión.');
+        }
+
+        // Seguridad: Proteger contra la eliminación del único administrador
+        if ($usuario->hasRole('admin')) {
+            $totalAdmins = Usuario::whereHas('rolesRelation', function ($q) {
+                $q->where('slug', 'admin');
+            })->orWhere('rol', 'admin')->count();
+
+            if ($totalAdmins <= 1) {
+                return back()->with('error', 'No es posible eliminar el único usuario administrador del sistema.');
+            }
+        }
+
+        $nombre = $usuario->nombre;
+
+        // Desvincular roles y permisos de forma atómica antes de eliminar
+        \Illuminate\Support\Facades\DB::transaction(function () use ($usuario) {
+            $usuario->rolesRelation()->detach();
+            $usuario->permisosRelation()->detach();
+            $usuario->delete();
+        });
+
+        return redirect()->route('usuarios.index')->with('msg', 'El usuario ' . $nombre . ' ha sido eliminado exitosamente.');
     }
 
     public function cambiarPasswordPropia(ChangePasswordRequest $request)
