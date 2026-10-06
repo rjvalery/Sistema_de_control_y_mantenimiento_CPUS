@@ -23,12 +23,18 @@ Route::middleware('auth')->group(function () {
     // Inventario (API para búsqueda AJAX)
     Route::get('/inventario/buscar-equipo', [\App\Http\Controllers\InventarioController::class, 'buscarEquipo'])->name('inventario.buscar');
 
-    // Inventario (Cargue Masivo y Bitácora protegido por RBAC)
-    Route::middleware('can:inventario.cargue_masivo')->group(function () {
-        Route::get('/inventario', [\App\Http\Controllers\CargueMasivoController::class, 'index'])->name('inventario.index');
-        Route::get('/inventario/plantilla', [\App\Http\Controllers\CargueMasivoController::class, 'plantilla'])->name('inventario.plantilla');
-        Route::post('/inventario/procesar', [\App\Http\Controllers\CargueMasivoController::class, 'procesar'])->name('inventario.procesar');
-        Route::get('/inventario/sincronizar', [\App\Http\Controllers\CargueMasivoController::class, 'sincronizar'])->name('inventario.sincronizar');
+    // Módulo Inventario
+    Route::middleware(['auth', 'can:inventario.ver'])->group(function () {
+        Route::get('/inventario', [\App\Http\Controllers\InventarioController::class, 'index'])->name('inventario.index');
+        Route::get('/inventario/sincronizar', [\App\Http\Controllers\InventarioController::class, 'sincronizar'])->name('inventario.sincronizar');
+        Route::get('/inventario/{id}', [\App\Http\Controllers\InventarioController::class, 'show'])->name('inventario.show')->where('id', '[0-9]+');
+    });
+
+    // Módulo Cargue Masivo (Control de acceso restringido a admin/supervisores)
+    Route::middleware(['auth', 'can:cargue_masivo.ejecutar'])->group(function () {
+        Route::get('/cargue-masivo', [\App\Http\Controllers\CargueMasivoController::class, 'index'])->name('cargue-masivo.index');
+        Route::post('/cargue-masivo/procesar', [\App\Http\Controllers\CargueMasivoController::class, 'procesar'])->name('cargue-masivo.procesar');
+        Route::get('/cargue-masivo/plantilla', [\App\Http\Controllers\CargueMasivoController::class, 'descargarPlantilla'])->name('cargue-masivo.plantilla');
     });
 
     // Visor seguro de evidencias técnicas
@@ -76,6 +82,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/usuarios/cambiar-password', [UsuariosController::class, 'cambiarPasswordPropia'])->name('usuarios.cambiar_password');
 
     // Módulo de Trazabilidad (Hoja de Vida)
-    Route::get('/trazabilidad', [\App\Http\Controllers\TrazabilidadController::class, 'index'])->name('trazabilidad.index');
-    Route::get('/trazabilidad/buscar', [\App\Http\Controllers\TrazabilidadController::class, 'buscar'])->name('trazabilidad.buscar');
+    Route::middleware('can:trazabilidad.ver')->group(function () {
+        Route::get('/trazabilidad', [\App\Http\Controllers\TrazabilidadController::class, 'index'])->name('trazabilidad.index');
+        Route::get('/trazabilidad/buscar', [\App\Http\Controllers\TrazabilidadController::class, 'buscar'])->name('trazabilidad.buscar');
+    });
 });

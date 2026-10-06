@@ -11,6 +11,21 @@ use Carbon\Carbon;
 class TrazabilidadService
 {
     /**
+     * Obtiene el último registro de un equipo en un módulo específico.
+     */
+    public static function obtenerUltimoRegistro(string $placa, string $modulo)
+    {
+        if ($modulo === 'soplado') {
+            return SopladoRegistro::where('placa_id', $placa)->orderBy('id', 'desc')->first();
+        } elseif ($modulo === 'portatiles') {
+            return GarantiaPortatil::where('placa_id_equipo', $placa)->orderBy('id', 'desc')->first();
+        } elseif ($modulo === 'equipos') {
+            return Equipo::where('placa_id', $placa)->orderBy('id', 'desc')->first();
+        }
+        return null;
+    }
+
+    /**
      * Busca el traslado más reciente asociado al serial o placa
      */
     public function obtenerUltimoTraslado(array $terminos): string

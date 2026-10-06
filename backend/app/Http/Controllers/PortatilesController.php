@@ -9,10 +9,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use App\Services\UploadService;
+use App\Traits\FiltraPorPeriodoYPermiso;
 use Exception;
 
 class PortatilesController extends Controller
 {
+    use FiltraPorPeriodoYPermiso;
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -22,51 +25,14 @@ class PortatilesController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico Portátiles.');
         }
 
-        $busqueda = trim((string)$request->query('buscar'));
-        $fechaDesde = $request->query('fecha_desde');
-        $fechaHasta = $request->query('fecha_hasta');
-        $limite = (int) ($request->query('limite') ?? 50);
-        if ($limite <= 0 || $limite > 500) {
-            $limite = 50;
-        }
+        $datos = $this->obtenerDatosPaginados(
+            GarantiaPortatil::query(),
+            $request,
+            ['placa_id_equipo', 'numero_traslado', 'numero_ticket', 'nombre_analista', 'estado_actual_equipo'],
+            'created_at'
+        );
 
-        $query = GarantiaPortatil::query();
-
-        // Filtro de privacidad: Si tiene activo 'Ver únicamente mis propios registros y dashboard personal'
-        if (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio')) {
-            $query->where('nombre_analista', $user->nombre);
-        }
-
-        if ($busqueda) {
-            $query->where(function($q) use ($busqueda) {
-                $q->where('placa_id_equipo', 'like', "%{$busqueda}%")
-                  ->orWhere('numero_traslado', 'like', "%{$busqueda}%")
-                  ->orWhere('numero_ticket', 'like', "%{$busqueda}%")
-                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%")
-                  ->orWhere('estado_actual_equipo', 'like', "%{$busqueda}%");
-            });
-        }
-        if ($fechaDesde) {
-            $query->where('created_at', '>=', $fechaDesde . ' 00:00:00');
-        }
-        if ($fechaHasta) {
-            $query->where('created_at', '<=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
-        $totalGeneral = (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio'))
-            ? GarantiaPortatil::where('nombre_analista', $user->nombre)->count()
-            : GarantiaPortatil::count();
-
-        return view('portatiles.index', [
-            'registros'      => $registros,
-            'totalFiltrados' => $registros->total(),
-            'totalGeneral'   => $totalGeneral,
-            'busqueda'       => $busqueda,
-            'fechaDesde'     => $fechaDesde,
-            'fechaHasta'     => $fechaHasta,
-            'limite'         => $limite,
-        ]);
+        return view('portatiles.index', $datos);
     }
 
     public function create()
@@ -86,11 +52,7 @@ class PortatilesController extends Controller
             return response()->json(null);
         }
 
-        $registro = GarantiaPortatil::where('placa_id_equipo', $placa)
-                        ->orderBy('id', 'desc')
-                        ->first();
-
-        return response()->json($registro);
+        return response()->json(\App\Services\TrazabilidadService::obtenerUltimoRegistro($placa, 'portatiles'));
     }
 
     public function evidencia(Request $request)

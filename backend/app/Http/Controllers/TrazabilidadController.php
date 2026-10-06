@@ -16,11 +16,19 @@ class TrazabilidadController extends Controller
 
     public function index()
     {
+        if (!auth()->user()->can('trazabilidad.ver')) {
+            abort(403, 'No tienes permisos para acceder al módulo de trazabilidad.');
+        }
+
         return view('trazabilidad.index');
     }
 
     public function buscar(Request $request)
     {
+        if (!auth()->user()->can('trazabilidad.ver')) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         $termino = trim($request->input('termino'));
 
         if (!$termino || strlen($termino) < 3) {

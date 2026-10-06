@@ -243,33 +243,7 @@
                         </div>
 
 
-                        <!-- Evidencia Fotográfica Opcional Directa -->
-                        <div class="col-12">
-                            <div class="p-3 bg-light rounded border border-primary-subtle">
-                                <label class="form-label fw-bold text-dark">
-                                    <i class="fa-solid fa-camera text-primary me-2"></i>Evidencia Fotográfica Directa (Opcional)
-                                </label>
-                                <input type="file" name="foto_equipo" id="foto_equipo" class="form-control" accept="image/*">
-                                <div class="form-text text-muted small">Puedes adjuntar la foto directamente o usar el módulo independiente abajo.</div>
-                            </div>
-                        </div>
-
-                        <!-- Separación de Evidencia Fotográfica -->
-                        <div class="col-12">
-                            <div class="alert alert-light border border-primary-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded shadow-sm gap-2">
-                                <div>
-                                    <div class="fw-bold text-primary">
-                                        <i class="fa-solid fa-camera me-2"></i> Módulo de Evidencia Fotográfica Independiente
-                                    </div>
-                                    <div class="small text-muted">
-                                        La captura de fotos ahora se gestiona en su propio enlace para mayor velocidad y comodidad.
-                                    </div>
-                                </div>
-                                <a href="{{ route('portatiles.evidencia') }}" class="btn btn-outline-primary btn-sm text-nowrap fw-semibold">
-                                    <i class="fa-solid fa-camera me-1"></i> Ir a Subir Evidencia
-                                </a>
-                            </div>
-                        </div>
+                        <!-- La evidencia fotográfica ha sido movida a un módulo independiente accesible desde el menú principal -->
 
                         <div class="col-12 mt-4">
                             <button type="button" class="btn btn-primary w-100 py-2 fs-6 fw-bold" id="btnGuardar" onclick="enviarFormulario()">
@@ -284,35 +258,24 @@
     </div>
 </div>
 
-<!-- MODAL EMERGENTE DE CONFIRMACIÓN -->
-<div class="modal fade" id="modalEmergente" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center p-3 shadow-lg border-0">
-            <div class="modal-body">
-                <div id="modalIcono" class="display-4 mb-2"></div>
-                <h5 class="modal-title fw-bold mb-2" id="modalTitulo"></h5>
-                <div class="text-muted small mb-3" id="modalMensaje"></div>
-                
-                <!-- Botones para estado de éxito -->
-                <div id="modalBotonesExito" class="d-grid gap-2">
-                    <a id="btnIrEvidencia" href="{{ route('portatiles.evidencia') }}" class="btn btn-warning fw-bold py-2 shadow-sm">
-                        <i class="fa-solid fa-camera me-1"></i> Subir Evidencia Fotográfica Ahora
-                    </a>
-                    <button type="button" class="btn btn-outline-secondary py-2" data-bs-dismiss="modal">
-                        Registrar Otra Laptop
-                    </button>
-                </div>
-
-                <!-- Botones para estado de error -->
-                <div id="modalBotonesError" class="d-none">
-                    <button type="button" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm" data-bs-dismiss="modal">
-                        <i class="fa-solid fa-xmark me-1"></i> Cerrar
-                    </button>
-                </div>
-            </div>
-        </div>
+<x-modal-emergente id="modalEmergente">
+    <!-- Botones para estado de éxito -->
+    <div id="modalBotonesExito" class="d-grid gap-2">
+        <a id="btnIrEvidencia" href="{{ route('portatiles.evidencia') }}" class="btn btn-warning fw-bold py-2 shadow-sm">
+            <i class="fa-solid fa-camera me-1"></i> Subir Evidencia Fotográfica Ahora
+        </a>
+        <button type="button" class="btn btn-outline-secondary py-2" data-bs-dismiss="modal">
+            Registrar Otra Laptop
+        </button>
     </div>
-</div>
+
+    <!-- Botones para estado de error -->
+    <div id="modalBotonesError" class="d-none">
+        <button type="button" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm" data-bs-dismiss="modal">
+            <i class="fa-solid fa-xmark me-1"></i> Cerrar
+        </button>
+    </div>
+</x-modal-emergente>
 @endsection
 
 @section('scripts')

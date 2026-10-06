@@ -92,25 +92,17 @@
                                        accept="image/*" required>
 
                                 <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
-                                    <!-- Botón Cámara con input nativo superpuesto -->
-                                    <div class="position-relative d-inline-block">
-                                        <button type="button" class="btn btn-primary btn-lg px-4 py-2 fw-bold shadow-sm" style="pointer-events: none;">
-                                            <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
-                                        </button>
-                                        <input type="file" id="foto_camara" accept="image/*" capture="environment" 
-                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
-                                               onchange="manejarSeleccionFoto(this)">
-                                    </div>
+                                    <!-- Botón Cámara -->
+                                    <button type="button" class="btn btn-primary btn-lg px-4 py-2 fw-bold shadow-sm" onclick="document.getElementById('foto_camara').click()">
+                                        <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
+                                    </button>
+                                    <input type="file" id="foto_camara" class="d-none" accept="image/*" capture="environment" onchange="manejarSeleccionFoto(this)">
 
-                                    <!-- Botón Galería con input nativo superpuesto -->
-                                    <div class="position-relative d-inline-block">
-                                        <button type="button" class="btn btn-outline-secondary btn-lg px-4 py-2 fw-bold shadow-sm" style="pointer-events: none;">
-                                            <i class="fa-solid fa-images me-2"></i> Galería / Archivos
-                                        </button>
-                                        <input type="file" id="foto_galeria" accept="image/*" 
-                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
-                                               onchange="manejarSeleccionFoto(this)">
-                                    </div>
+                                    <!-- Botón Galería -->
+                                    <button type="button" class="btn btn-outline-secondary btn-lg px-4 py-2 fw-bold shadow-sm" onclick="document.getElementById('foto_galeria').click()">
+                                        <i class="fa-solid fa-images me-2"></i> Galería / Archivos
+                                    </button>
+                                    <input type="file" id="foto_galeria" class="d-none" accept="image/*" onchange="manejarSeleccionFoto(this)">
                                 </div>
                                 
                                 <div id="upload-label" class="form-text mt-2 text-muted fw-semibold">
@@ -315,7 +307,12 @@ function mostrarModal(icono, titulo, mensaje) {
 async function enviarEvidencia() {
     const form = document.getElementById('formEvidenciaPortatil');
     if (!form.checkValidity()) {
-        form.reportValidity();
+        const principal = document.getElementById('foto_equipo');
+        if (principal && principal.required && !principal.value) {
+            mostrarModal('<i class="fa-solid fa-triangle-exclamation text-warning"></i>', 'Falta la Foto', 'Por favor selecciona o toma una foto del portátil antes de guardar.');
+        } else {
+            form.reportValidity();
+        }
         return;
     }
 
@@ -329,7 +326,9 @@ async function enviarEvidencia() {
         } catch (e) {}
     }
 
-    const placaVal = document.getElementById('placa_id_equipo')?.value?.trim() || '';
+    const formData = new FormData(form);
+    const placaInputEl = document.getElementById('placa_id_equipo');
+    const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
 
     if (fotoOptimBlob) {

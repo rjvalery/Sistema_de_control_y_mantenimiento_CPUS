@@ -84,9 +84,9 @@ class RbacService
             ],
             'Inventario' => [
                 [
-                    'slug' => 'inventario.cargue_masivo',
-                    'nombre' => 'Cargue masivo',
-                    'descripcion' => 'Permite importar plantillas masivas y sincronizar la base de datos de inventario'
+                    'slug' => 'inventario.ver',
+                    'nombre' => 'Ver Inventario General',
+                    'descripcion' => 'Permite consultar, filtrar y gestionar el parque de equipos en almacén'
                 ],
                 [
                     'slug' => 'inventario.consultar',
@@ -96,8 +96,21 @@ class RbacService
                 [
                     'slug' => 'inventario.traslados',
                     'nombre' => 'Traslados',
-                    'descripcion' => 'Permite gestionar y validar traslados técnicos'
                 ],
+            ],
+            'Cargue Masivo' => [
+                [
+                    'slug' => 'cargue_masivo.ejecutar',
+                    'nombre' => 'Ejecutar Cargue Masivo',
+                    'descripcion' => 'Permite importar planillas Excel y cargar miles de registros al inventario (Solo Administradores)'
+                ],
+            ],
+            'Trazabilidad' => [
+                [
+                    'slug' => 'trazabilidad.ver',
+                    'nombre' => 'Ver Módulo de Trazabilidad',
+                    'descripcion' => 'Permite consultar la hoja de vida y línea de tiempo de los equipos'
+                ]
             ],
             'Usuarios y Roles' => [
                 [
@@ -171,6 +184,8 @@ class RbacService
                 'cpus.ver'       => 'cpus.ver_bitacora',
                 'portatiles.ver' => 'portatiles.ver_bitacora',
                 'soplado.ver'    => 'soplado.ver_bitacora',
+                'inventario.consultar' => 'inventario.ver',
+                'inventario.cargue_masivo' => 'cargue_masivo.ejecutar',
             ];
 
             foreach ($migraciones as $antiguo => $nuevo) {

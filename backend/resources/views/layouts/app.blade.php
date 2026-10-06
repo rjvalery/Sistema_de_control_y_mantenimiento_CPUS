@@ -68,6 +68,7 @@
                         <ul class="dropdown-menu">
                             @can('portatiles.registrar')
                             <li><a class="dropdown-item" href="{{ route('portatiles.create') }}"><i class="fa-solid fa-plus me-2 text-success"></i>Nuevo Diagnóstico</a></li>
+                            <li><a class="dropdown-item" href="{{ route('portatiles.evidencia') }}"><i class="fa-solid fa-camera me-2 text-primary"></i>Subir Evidencia</a></li>
                             @endcan
                             @can('portatiles.ver_bitacora')
                             <li><a class="dropdown-item" href="{{ route('portatiles.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
@@ -75,14 +76,21 @@
                         </ul>
                     </li>
                     @endcanany
-                    @can('inventario.cargue_masivo')
+                    @can('inventario.ver')
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('inventario.index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Inventario</a>
                     </li>
                     @endcan
+                    @can('cargue_masivo.ejecutar')
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('cargue-masivo.index') }}"><i class="fa-solid fa-cloud-arrow-up me-1"></i> Cargue Masivo</a>
+                    </li>
+                    @endcan
+                    @can('trazabilidad.ver')
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('trazabilidad.index') }}"><i class="fa-solid fa-clock-rotate-left me-1"></i> Trazabilidad</a>
                     </li>
+                    @endcan
                     @can('usuarios.ver')
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('usuarios.index') }}"><i class="fa-solid fa-users-gear me-1"></i> Usuarios</a>

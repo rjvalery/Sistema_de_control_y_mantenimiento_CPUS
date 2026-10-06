@@ -9,9 +9,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Exception;
+use App\Traits\FiltraPorPeriodoYPermiso;
+use App\Services\UploadService;
 
 class EquiposController extends Controller
 {
+    use FiltraPorPeriodoYPermiso;
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -21,51 +25,14 @@ class EquiposController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico CPU.');
         }
 
-        $busqueda = trim((string)$request->query('buscar'));
-        $fechaDesde = $request->query('fecha_desde');
-        $fechaHasta = $request->query('fecha_hasta');
-        $limite = (int) ($request->query('limite') ?? 50);
-        if ($limite <= 0 || $limite > 500) {
-            $limite = 50;
-        }
+        $datos = $this->obtenerDatosPaginados(
+            Equipo::query(),
+            $request,
+            ['placa_id', 'num_traslado', 'nombre_analista', 'estado_actual', 'tipo_gestion'],
+            'fecha_creacion'
+        );
 
-        $query = Equipo::query();
-
-        // Filtro de privacidad: Si tiene activo 'Ver únicamente mis propios registros y dashboard personal'
-        if (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio')) {
-            $query->where('nombre_analista', $user->nombre);
-        }
-
-        if ($busqueda) {
-            $query->where(function($q) use ($busqueda) {
-                $q->where('placa_id', 'like', "%{$busqueda}%")
-                  ->orWhere('num_traslado', 'like', "%{$busqueda}%")
-                  ->orWhere('nombre_analista', 'like', "%{$busqueda}%")
-                  ->orWhere('estado_actual', 'like', "%{$busqueda}%")
-                  ->orWhere('tipo_gestion', 'like', "%{$busqueda}%");
-            });
-        }
-        if ($fechaDesde) {
-            $query->where('fecha_creacion', '>=', $fechaDesde . ' 00:00:00');
-        }
-        if ($fechaHasta) {
-            $query->where('fecha_creacion', '<=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $query->orderBy('id', 'desc')->paginate($limite)->withQueryString();
-        $totalGeneral = (!$user->hasRole('admin') && $user->tienePermiso('dashboard.ver_solo_propio'))
-            ? Equipo::where('nombre_analista', $user->nombre)->count()
-            : Equipo::count();
-
-        return view('equipos.index', [
-            'registros'      => $registros,
-            'totalFiltrados' => $registros->total(),
-            'totalGeneral'   => $totalGeneral,
-            'busqueda'       => $busqueda,
-            'fechaDesde'     => $fechaDesde,
-            'fechaHasta'     => $fechaHasta,
-            'limite'         => $limite,
-        ]);
+        return view('equipos.index', $datos);
     }
 
     public function create()
@@ -84,47 +51,8 @@ class EquiposController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para guardar diagnósticos de CPU.');
         }
 
-        $nombreArchivo = null;
-        if ($request->hasFile('evidencia') || $request->hasFile('foto') || $request->hasFile('foto_equipo') || $request->hasFile('foto_ruta')) {
-            $archivo = $request->file('evidencia') ?? $request->file('foto') ?? $request->file('foto_equipo') ?? $request->file('foto_ruta');
-            
-            $anio = now()->format('Y');
-            $meses = [
-                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
-            ];
-            $mes = $meses[(int)now()->format('n')] ?? ucfirst(now()->locale('es')->translatedFormat('F')); // Ej: Octubre
-            $dia = now()->format('d'); // Ej: 05
-            $modulo = 'cpus';
-
-            // Ruta base física
-            $basePath = env('EVIDENCIAS_PATH', 'C:\\Users\\LENOVO\\Pictures\\fotos');
-            $basePath = rtrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR);
-            
-            // Carpeta destino: C:\Users\LENOVO\Pictures\fotos\2026\Octubre\05
-            $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
-
-            if (!File::isDirectory($directorioDestino)) {
-                File::makeDirectory($directorioDestino, 0777, true, true);
-            }
-
-            // Nombre del archivo basado en la placa
-            $placaRaw = $request->placa ?? $request->placa_id ?? 'EQUIPO';
-            $placaLimpia = trim(strtoupper($placaRaw));
-            $extension = $archivo->getClientOriginalExtension() ?: 'jpg';
-            $nombreArchivo = $placaLimpia . '.' . $extension;
-
-            // Mover físicamente el archivo
-            $archivo->move($directorioDestino, $nombreArchivo);
-
-            // Redundancia en la subcarpeta del módulo
-            $directorioModulo = $basePath . DIRECTORY_SEPARATOR . $modulo . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
-            if (!File::isDirectory($directorioModulo)) {
-                File::makeDirectory($directorioModulo, 0777, true, true);
-            }
-            @copy($directorioDestino . DIRECTORY_SEPARATOR . $nombreArchivo, $directorioModulo . DIRECTORY_SEPARATOR . $nombreArchivo);
-        }
+        $placaFinal = $request->placa_id ?? $request->placa;
+        $nombreArchivo = UploadService::procesarSubidaFisica($request, 'cpus', $placaFinal);
 
         $user = auth()->user();
         $nombreAnalista = ($user && $user->rol === 'analista') 
@@ -141,7 +69,6 @@ class EquiposController extends Controller
             $queVaIntervenir = implode(';', array_filter($queVaIntervenir));
         }
 
-        $placaFinal = $request->placa_id ?? $request->placa;
         $origenPieza = ($request->tipo_gestion === 'Intervencion') ? $request->origen_pieza : null;
 
         try {

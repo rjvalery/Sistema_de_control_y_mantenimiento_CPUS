@@ -286,8 +286,8 @@
             <div class="d-flex align-items-start gap-3">
                 <div class="mes-kpi-icon"><i class="fa-regular fa-calendar-check"></i></div>
                 <div class="min-w-0">
-                    <p class="mes-kpi-label">Máquinas Ingresadas</p>
-                    <p class="mes-kpi-value" id="kpiTotalCargados">{{ number_format((int) $statsInventario['total_cargados']) }}</p>
+                    <p class="mes-kpi-label">Máquinas Intervenidas</p>
+                    <p class="mes-kpi-value" id="kpiTotalIntervenidas">{{ number_format((int) $statsInventario['total_intervenidos']) }}</p>
                     <p class="mes-kpi-sub" id="kpiSubPeriodo">{{ $labelPeriodo }}</p>
                 </div>
             </div>

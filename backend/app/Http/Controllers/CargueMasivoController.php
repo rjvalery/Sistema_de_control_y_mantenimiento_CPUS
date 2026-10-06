@@ -26,84 +26,14 @@ class CargueMasivoController extends Controller
             return redirect()->route('login')->with('error', 'Acceso denegado.');
         }
 
-        $busqueda = trim($request->query('buscar'));
-        $filtro   = trim($request->query('filtro')); 
-        $traslado = trim($request->query('traslado'));
-        $limite   = (int) ($request->query('limite') ?? 250);
-        
-        if ($limite <= 0 || $limite > 1000) {
-            $limite = 250;
-        }
-
-        $query = InventarioGeneral::query();
-
-        if ($busqueda) {
-            $query->where(function($q) use ($busqueda) {
-                $q->where('identificador_1', 'like', "%{$busqueda}%")
-                  ->orWhere('identificador_2', 'like', "%{$busqueda}%")
-                  ->orWhere('placa_id', 'like', "%{$busqueda}%")
-                  ->orWhere('serial', 'like', "%{$busqueda}%")
-                  ->orWhere('ref_principal', 'like', "%{$busqueda}%")
-                  ->orWhere('descripcion', 'like', "%{$busqueda}%");
-            });
-        }
-
-        if ($filtro === 'agregados') {
-            $query->where('intervenido', 1);
-        } elseif ($filtro === 'pendientes') {
-            $query->where('intervenido', 0);
-        }
-
-        if ($traslado) {
-            if ($traslado === 'sin_traslado') {
-                $query->where(function($q) {
-                    $q->whereNull('num_traslado')->orWhere('num_traslado', '');
-                });
-            } else {
-                $query->where('num_traslado', $traslado);
-            }
-        }
-
-        $registros = $query->orderBy('id', 'desc')->limit($limite)->get();
-
-        $totalCargados = InventarioGeneral::count();
-        $totalIntervenidos = InventarioGeneral::where('intervenido', 1)->count();
-        $totalPendientes = InventarioGeneral::where('intervenido', 0)->count();
-
-        $statsInventario = [
-            'totalCargados' => $totalCargados,
-            'totalIntervenidos' => $totalIntervenidos,
-            'totalPendientes' => $totalPendientes,
-            'porcentajeAgregadas' => $totalCargados > 0 ? round(($totalIntervenidos / $totalCargados) * 100, 1) : 0,
-        ];
-
-        $trasladosDisponibles = InventarioGeneral::select('num_traslado', DB::raw('count(*) as total'))
-            ->whereNotNull('num_traslado')
-            ->where('num_traslado', '!=', '')
-            ->groupBy('num_traslado')
-            ->orderBy('num_traslado', 'asc')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->num_traslado => $item->total];
-            })->toArray();
-
         return view('cargue_masivo.index', [
-            'registros'            => $registros,
-            'totalRegistros'       => $statsInventario['totalCargados'],
-            'statsInventario'      => $statsInventario,
-            'busqueda'             => $busqueda,
-            'filtro'               => $filtro,
-            'traslado'             => $traslado,
-            'limite'               => $limite,
-            'trasladosDisponibles' => $trasladosDisponibles,
-            'totalFiltrados'       => $registros->count(),
-            'esAdmin'              => Auth::user()->rol === 'admin',
+            'esAdmin' => Auth::user()->rol === 'admin',
         ]);
     }
 
-    public function plantilla()
+    public function descargarPlantilla()
     {
-        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('cargue_masivo.ejecutar')) {
             abort(403, 'No tienes permiso para descargar la plantilla de cargue.');
         }
 
@@ -136,7 +66,7 @@ class CargueMasivoController extends Controller
 
     public function procesar(Request $request)
     {
-        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('cargue_masivo.ejecutar')) {
             abort(403, 'No tienes permiso para procesar cargues masivos.');
         }
 
@@ -338,21 +268,4 @@ class CargueMasivoController extends Controller
         return redirect()->route('inventario.index')->with('error', "No se insertaron registros. Errores: " . implode(', ', $detallesErrores));
     }
 
-    public function sincronizar(Request $request)
-    {
-        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasPermission('inventario.cargue_masivo')) {
-            abort(403, 'No tienes permiso para sincronizar el inventario.');
-        }
-
-        $traslado = trim($request->query('traslado'));
-        
-        $inventarioService = app(\App\Services\InventarioService::class);
-        $resultados = $inventarioService->conciliarInventarioCompleto(!empty($traslado) ? $traslado : null);
-
-        $msg = "Sincronización y Conciliación completada con éxito. ";
-        $msg .= "Se actualizaron {$resultados['intervenidos_actualizados']} máquinas intervenidas y se recuperaron {$resultados['traslados_recuperados']} números de traslado.";
-
-        return redirect()->route('inventario.index', $traslado ? ['traslado' => $traslado] : [])
-                         ->with('msg', $msg);
-    }
 }
