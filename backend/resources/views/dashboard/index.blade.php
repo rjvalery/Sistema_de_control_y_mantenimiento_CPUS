@@ -358,14 +358,20 @@
                         <span id="tablaCountBadge" class="fw-semibold text-dark">{{ $maquinasIntervenidas->total() }}</span> en total</p>
                 </div>
 
-                <nav class="mes-segmented" aria-label="Filtro de período" id="segmentedPeriodo">
-                    @foreach ($segmentos as $valor => $texto)
-                        <a href="{{ route('dashboard', array_merge($filtrosExtra, ['periodo' => $valor])) }}"
-                           data-periodo="{{ $valor }}"
-                           class="mes-seg-btn text-decoration-none {{ $periodoActivo === $valor ? 'bg-teal text-white' : 'text-muted' }}"
-                           @if ($periodoActivo === $valor) aria-current="page" @endif>{{ $texto }}</a>
-                    @endforeach
-                </nav>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="#" id="btnDescargarExcel" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-2 fw-semibold px-3 py-1 shadow-sm" style="border-radius: 8px;">
+                        <i class="fa-solid fa-file-excel text-success"></i>
+                        <span>Descargar Bitácora</span>
+                    </a>
+                    <nav class="mes-segmented" aria-label="Filtro de período" id="segmentedPeriodo">
+                        @foreach ($segmentos as $valor => $texto)
+                            <a href="{{ route('dashboard', array_merge($filtrosExtra, ['periodo' => $valor])) }}"
+                               data-periodo="{{ $valor }}"
+                               class="mes-seg-btn text-decoration-none {{ $periodoActivo === $valor ? 'bg-teal text-white' : 'text-muted' }}"
+                               @if ($periodoActivo === $valor) aria-current="page" @endif>{{ $texto }}</a>
+                        @endforeach
+                    </nav>
+                </div>
             </div>
 
             <div class="px-4 pb-3 flex-grow-1">
@@ -476,5 +482,22 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        actualizarEnlaceExportar();
+    });
+
+    function actualizarEnlaceExportar() {
+        const btn = document.getElementById('btnDescargarExcel');
+        if (btn) {
+            const periodoActual = '{{ $periodoActivo }}';
+            const analistaActual = '{{ request("analista_id") }}';
+            btn.href = `{{ route('dashboard.exportar') }}?periodo=${periodoActual}&analista_id=${analistaActual}`;
+        }
+    }
+</script>
 @endsection
 

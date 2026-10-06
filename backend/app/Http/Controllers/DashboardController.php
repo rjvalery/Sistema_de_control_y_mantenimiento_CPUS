@@ -7,6 +7,7 @@ use App\Models\GarantiaPortatil;
 use App\Models\InventarioGeneral;
 use App\Models\SopladoRegistro;
 use App\Models\Usuario;
+use App\Services\BitacoraExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -491,6 +492,76 @@ class DashboardController extends Controller
         }
 
         return [$periodo, $inicio, $fin, $labelPeriodo];
+    }
+
+    public function exportarBitacora(Request $request, BitacoraExportService $exportService)
+    {
+        $user = auth()->user();
+        $periodo = strtolower(trim($request->get('periodo', 'dia')));
+        
+        $esAdmin = $user && $user->hasRole('admin');
+        $esRestringido = !$esAdmin && ($user && ($user->can('dashboard.ver_solo_propio') || $user->hasRole('analista') || $user->rol === 'analista'));
+        
+        $nombreUsuario = $user ? ($user->name ?? $user->nombre) : null;
+        
+        $filtroAnalistaNombre = null;
+        if ($esRestringido) {
+            $filtroAnalistaNombre = $nombreUsuario;
+        } else {
+            $paramAnalista = $request->get('analista_id');
+            if ($paramAnalista && $paramAnalista !== 'todos') {
+                $analistaObj = Usuario::find($paramAnalista);
+                if ($analistaObj) {
+                    $filtroAnalistaNombre = $analistaObj->name ?? $analistaObj->nombre;
+                }
+            }
+        }
+
+        [$periodo, $inicio, $fin] = $this->resolverRangoFechas($periodo);
+
+        $query = InventarioGeneral::query()->where('intervenido', 1);
+
+        $colAnalistaMatriz = $this->obtenerColumnaExistente('inventario_general', ['analista_intervencion']);
+        if ($filtroAnalistaNombre) {
+            $query->where($colAnalistaMatriz, $filtroAnalistaNombre);
+        }
+
+        if ($inicio && $fin) {
+            $query->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [
+                $inicio->toDateTimeString(),
+                $fin->toDateTimeString()
+            ]);
+        }
+
+        $query->orderBy('id', 'desc');
+
+        $encabezados = ['ID / RADICADO', 'PLACA', 'SERIAL', 'MÓDULO', 'MARCA', 'MODELO', 'FALLA / CONDICIÓN', 'ANALISTA', 'FECHA INTERVENCIÓN'];
+        
+        $nombreArchivo = 'Bitacora_Maquinas_Intervenidas_' . Carbon::now('America/Bogota')->format('Y-m-d') . '.csv';
+
+        return $exportService->exportarCsvStream($nombreArchivo, $encabezados, $query, function ($row) {
+            $fecha = $row->fecha_intervencion ?? $row->created_at;
+            if ($fecha) {
+                if (is_string($fecha)) {
+                    $fecha = Carbon::parse($fecha);
+                }
+                $fechaStr = $fecha->setTimezone('America/Bogota')->format('d/m/Y H:i:s');
+            } else {
+                $fechaStr = '';
+            }
+
+            return [
+                $row->id,
+                $row->identificador_1 ?: ($row->placa_id ?: 'N/A'),
+                $row->identificador_2 ?: ($row->serial ?: 'N/A'),
+                $row->modulo_intervencion ?: 'N/A',
+                $row->marca ?: 'N/A',
+                $row->modelo ?: 'N/A',
+                $row->observaciones ?? ($row->estado ?? 'N/A'),
+                $row->analista_intervencion ?: 'N/A',
+                $fechaStr
+            ];
+        });
     }
 }
 

@@ -377,6 +377,10 @@
             <div class="text-muted" style="font-size: 0.72rem;">Registro cronológico y auditoría técnica de equipos atendidos</div>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
+            <a href="#" id="btnDescargarExcel" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-2 fw-semibold px-3 py-1 shadow-sm" style="border-radius: 8px;">
+                <i class="fa-solid fa-file-excel text-success"></i>
+                <span>Descargar Bitácora</span>
+            </a>
             <!-- Selector de Período Reubicado -->
             <div class="d-flex align-items-center gap-1">
                 <label for="filtroPeriodoMatrizSelect" class="small fw-semibold text-secondary mb-0 d-none d-sm-inline-flex align-items-center gap-1">
@@ -514,6 +518,17 @@ let analistaActual = '{{ $analista_id ?? 'todos' }}';
 let paginaActual = {{ $maquinasIntervenidas->currentPage() }};
 let totalPaginas = {{ $maquinasIntervenidas->lastPage() }};
 let totalRegistros = {{ $maquinasIntervenidas->total() }};
+
+document.addEventListener('DOMContentLoaded', function () {
+    actualizarEnlaceExportar();
+});
+
+function actualizarEnlaceExportar() {
+    const btn = document.getElementById('btnDescargarExcel');
+    if (btn) {
+        btn.href = `{{ route('dashboard.exportar') }}?periodo=${periodoActual}&analista_id=${analistaActual}`;
+    }
+}
 
 // Configuración inicial de datos analíticos
 const dataAnalytics = {
@@ -793,6 +808,8 @@ function aplicarFiltros(nuevoPeriodo = null, nuevoAnalista = null, nuevaPagina =
             }
             window.history.pushState(null, '', nuevaUrl);
         }
+
+        actualizarEnlaceExportar();
     })
     .catch(err => {
         console.error('Error al actualizar métricas:', err);
