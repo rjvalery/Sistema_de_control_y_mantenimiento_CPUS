@@ -50,11 +50,8 @@ class DashboardMetricasService
 
         [$periodoStr, $inicio, $fin, $labelPeriodo] = $this->resolverRangoFechas($periodo);
 
-        // Auto-saneamiento preventivo
-        InventarioGeneral::where('intervenido', 1)
-            ->whereNull('fecha_intervencion')
-            ->whereNotNull('created_at')
-            ->update(['fecha_intervencion' => DB::raw('created_at')]);
+        // Auto-saneamiento removido para evitar overhead (UPDATE en GET).
+        // Se ejecuta por comando Artisan (SanearFechasInventario).
 
         $kpis = $this->calcularKpis($inicio, $fin, $filtroAnalistaNombre, $esRestringido, $nombreUsuario);
         $matriz = $this->obtenerMatrizIntervenciones($inicio, $fin, $filtroAnalistaNombre, $esRestringido, $nombreUsuario, $page, $user);
@@ -144,14 +141,10 @@ class DashboardMetricasService
         $totalCargadosGlobal = $cargadosGlobalQuery->count();
         $totalIntervenidos = $intervenidosQuery->count();
 
-        $tieneEstado = Schema::hasColumn('inventario_general', 'estado');
-        $qPendBaja = InventarioGeneral::query()->where(function ($q) use ($tieneEstado) {
+        $qPendBaja = InventarioGeneral::query()->where(function ($q) {
             $q->where(function ($p) {
                 $p->where('intervenido', 0)->orWhereNull('intervenido');
-            });
-            if ($tieneEstado) {
-                $q->orWhereRaw('LOWER(estado) LIKE ?', ['%baja%']);
-            }
+            })->orWhereRaw('LOWER(estado) LIKE ?', ['%baja%']);
         });
         if ($analistaFiltroInventario) {
             $qPendBaja->where(function ($q) use ($analistaFiltroInventario) {
@@ -166,29 +159,50 @@ class DashboardMetricasService
         }
         $totalTraslados = $trasladosQuery->distinct('num_traslado')->count('num_traslado');
 
-        $totalBaja = 0;
-        if ($tieneEstado) {
-            $qBaja = InventarioGeneral::whereRaw('LOWER(estado) LIKE ?', ['%baja%']);
-            if ($analistaFiltroInventario) {
-                $qBaja->where('analista_intervencion', $analistaFiltroInventario);
-            }
-            $totalBaja = $qBaja->count();
+        $qBaja = InventarioGeneral::whereRaw('LOWER(estado) LIKE ?', ['%baja%']);
+        if ($analistaFiltroInventario) {
+            $qBaja->where('analista_intervencion', $analistaFiltroInventario);
         }
+        $totalBaja = $qBaja->count();
 
         $hoyBogota = Carbon::now('America/Bogota');
         $hoyIni = $hoyBogota->copy()->startOfDay()->toDateTimeString();
         $hoyFin = $hoyBogota->copy()->endOfDay()->toDateTimeString();
 
-        $nombresActivos = collect();
-        $recolectar = function ($query, string $colNombre) use (&$nombresActivos, $esRestringido, $nombreUsuario) {
-            $query->whereNotNull($colNombre)->where($colNombre, '!=', '');
-            if ($esRestringido) { $query->where($colNombre, $nombreUsuario); }
-            $nombresActivos = $nombresActivos->merge($query->distinct()->pluck($colNombre));
-        };
-        $recolectar(InventarioGeneral::where('intervenido', 1)->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [$hoyIni, $hoyFin]), 'analista_intervencion');
-        $recolectar(Equipo::whereBetween('fecha_creacion', [$hoyIni, $hoyFin]), 'nombre_analista');
-        $recolectar(SopladoRegistro::whereBetween('created_at', [$hoyIni, $hoyFin]), 'nombre_analista');
-        $recolectar(GarantiaPortatil::whereBetween('created_at', [$hoyIni, $hoyFin]), 'nombre_analista');
+        $qEquipos = DB::table('equipos')
+            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->whereBetween('fecha_creacion', [$hoyIni, $hoyFin])
+            ->whereNotNull('nombre_analista')
+            ->where('nombre_analista', '!=', '');
+            
+        $qSoplado = DB::table('soplado_registros')
+            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->whereBetween('created_at', [$hoyIni, $hoyFin])
+            ->whereNotNull('nombre_analista')
+            ->where('nombre_analista', '!=', '');
+
+        $qPortatiles = DB::table('garantias_portatiles')
+            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->whereBetween('created_at', [$hoyIni, $hoyFin])
+            ->whereNotNull('nombre_analista')
+            ->where('nombre_analista', '!=', '');
+
+        $qInventario = DB::table('inventario_general')
+            ->selectRaw('LOWER(TRIM(analista_intervencion)) as analista')
+            ->where('intervenido', 1)
+            ->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [$hoyIni, $hoyFin])
+            ->whereNotNull('analista_intervencion')
+            ->where('analista_intervencion', '!=', '');
+
+        if ($esRestringido) {
+            $qEquipos->where('nombre_analista', $nombreUsuario);
+            $qSoplado->where('nombre_analista', $nombreUsuario);
+            $qPortatiles->where('nombre_analista', $nombreUsuario);
+            $qInventario->where('analista_intervencion', $nombreUsuario);
+        }
+
+        $subquery = $qEquipos->union($qSoplado)->union($qPortatiles)->union($qInventario);
+        $analistasActivosHoy = DB::query()->fromSub($subquery, 'analistas')->count();
 
         return [
             'totalEquipos'         => $totalCPUs,
@@ -201,7 +215,7 @@ class DashboardMetricasService
             'porcPt'               => $totalIntervenciones > 0 ? round(($totalPortatiles / $totalIntervenciones) * 100, 1) : 0,
             'totalTraslados'       => $totalTraslados,
             'totalAnalistas'       => Usuario::where('rol', 'analista')->where('activo', true)->count(),
-            'analistasActivosHoy'  => $nombresActivos->map(fn ($n) => mb_strtolower(trim((string) $n)))->filter()->unique()->count(),
+            'analistasActivosHoy'  => $analistasActivosHoy,
             'totalBaja'            => $totalBaja,
             'statsInventario'      => [
                 'total_cargados'        => $totalCargados,
