@@ -295,5 +295,5 @@
         guardarEquipo: '{{ route("equipos.store") }}'
     };
 </script>
-<script src="{{ asset('assets/js/equipos_formulario.js') }}"></script>
+<script src="{{ asset('assets/js/equipos_formulario.js') }}?v={{ time() }}"></script>
 @endsection

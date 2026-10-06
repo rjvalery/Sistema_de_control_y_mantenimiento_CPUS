@@ -5,928 +5,476 @@
 @section('container_class', 'container-fluid px-3 px-xl-4')
 
 @section('styles')
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+    /* ============ MES Platform · Design Tokens ============ */
     :root {
-        --pbi-canvas-bg: #f4f6f9;
-        --pbi-card-bg: #ffffff;
-        --pbi-border: #e2e8f0;
-        --pbi-text-main: #1e293b;
-        --pbi-text-muted: #64748b;
-        --pbi-blue: #0078d4;
-        --pbi-cyan: #00bcf2;
-        --pbi-teal: #10b981;
-        --pbi-amber: #f59e0b;
-        --pbi-purple: #7c3aed;
+        --mes-teal: #00B69B;
+        --mes-teal-hover: #009E86;
+        --mes-teal-soft: #E6F8F5;
+        --mes-amber: #F59E0B;
+        --mes-amber-soft: #FEF3C7;
+        --mes-amber-text: #B45309;
+        --mes-danger-soft: #FEE2E2;
+        --mes-danger-text: #B91C1C;
+        --mes-page-bg: #F8FAFC;
+        --mes-card-bg: #FFFFFF;
+        --mes-item-bg: #F1F5F9;
+        --mes-border: #E2E8F0;
+        --mes-text: #0F172A;
+        --mes-muted: #64748B;
+        --mes-radius-card: 16px;
+        --mes-radius-item: 12px;
     }
 
     body {
-        background-color: var(--pbi-canvas-bg);
-        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--mes-page-bg);
+        font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+        color: var(--mes-text);
     }
 
-    /* 1. Cabecera Ejecutiva Canvas */
-    .pbi-canvas-header {
-        background-color: var(--pbi-card-bg);
-        border: 1px solid var(--pbi-border);
-        border-radius: 8px;
-        padding: 0.85rem 1.25rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
-    .pbi-canvas-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        color: var(--pbi-text-main);
-        text-transform: uppercase;
-        margin: 0;
-    }
-    .pbi-select-filter {
-        background-color: #f8fafc;
-        border: 1px solid #cbd5e1;
-        font-size: 0.825rem;
-        font-weight: 600;
-        color: #334155;
-        border-radius: 6px;
-        min-width: 170px;
-        cursor: pointer;
-    }
-    .pbi-select-filter:focus {
-        border-color: var(--pbi-blue);
-        box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+    .bg-teal { background-color: var(--mes-teal) !important; }
+    .text-teal { color: var(--mes-teal) !important; }
+    .text-muted { color: var(--mes-muted) !important; }
+
+    /* ============ Tarjetas base ============ */
+    .mes-card {
+        background-color: var(--mes-card-bg);
+        border: 1px solid var(--mes-border);
+        border-radius: var(--mes-radius-card);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
-    /* 2. Tarjetas KPI Estilo Power BI Card */
-    .pbi-kpi-card {
-        background-color: var(--pbi-card-bg);
-        border: 1px solid var(--pbi-border);
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        position: relative;
-        overflow: hidden;
-    }
-    .pbi-kpi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-    .pbi-kpi-val {
-        font-size: 1.85rem;
-        font-weight: 700;
-        line-height: 1.1;
-        margin: 0;
-        color: var(--pbi-text-main);
-        letter-spacing: -0.5px;
-    }
-    .pbi-kpi-label {
-        font-size: 0.72rem;
+    .mes-title {
+        font-size: 1.05rem;
         font-weight: 600;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        color: var(--pbi-text-muted);
-        margin-top: 0.35rem;
+        color: var(--mes-text);
+        margin: 0;
+        letter-spacing: -0.2px;
     }
-    .pbi-kpi-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 8px;
+    .mes-subtitle {
+        font-size: 0.8rem;
+        color: var(--mes-muted);
+        margin: 0.15rem 0 0;
+    }
+
+    /* ============ KPI ============ */
+    .mes-kpi {
+        padding: 1.25rem 1.35rem;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .mes-kpi:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        border-color: rgba(0, 182, 155, 0.35);
+    }
+    .mes-kpi-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background-color: var(--mes-teal-soft);
+        color: var(--mes-teal);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         flex-shrink: 0;
     }
-    .pbi-icon-blue { background-color: #eff6ff; color: #0078d4; }
-    .pbi-icon-teal { background-color: #ecfdf5; color: #10b981; }
-    .pbi-icon-amber { background-color: #fffbeb; color: #f59e0b; }
-    .pbi-icon-purple { background-color: #f5f3ff; color: #7c3aed; }
-
-    /* 3. Widgets Modulares Analíticos */
-    .pbi-widget {
-        background-color: var(--pbi-card-bg);
-        border: 1px solid var(--pbi-border);
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-    }
-    .pbi-widget-header {
-        padding: 0.85rem 1.25rem;
-        border-bottom: 1px solid #f1f5f9;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .pbi-widget-title {
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        color: #475569;
+    .mes-kpi-label {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--mes-muted);
         margin: 0;
     }
-    .pbi-chart-container {
-        position: relative;
-        min-height: 250px;
-        max-height: 270px;
-    }
-    .pbi-donut-center {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        pointer-events: none;
-    }
-    .pbi-donut-val {
-        font-size: 1.65rem;
-        font-weight: 700;
-        line-height: 1;
-        color: var(--pbi-text-main);
-    }
-    .pbi-donut-lbl {
-        font-size: 0.72rem;
+    .mes-kpi-value {
+        font-size: 2.4rem;
         font-weight: 600;
-        text-transform: uppercase;
-        color: var(--pbi-text-muted);
-        letter-spacing: 0.4px;
+        line-height: 1.1;
+        letter-spacing: -1px;
+        color: var(--mes-text);
+        margin: 0.35rem 0 0.4rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .mes-kpi-value small {
+        font-size: 1.35rem;
+        font-weight: 500;
+        color: var(--mes-muted);
+        letter-spacing: 0;
+    }
+    .mes-kpi-sub {
+        font-size: 0.78rem;
+        color: var(--mes-muted);
+        margin: 0;
     }
 
-    /* 4. Tabla Matriz Analítica */
-    .pbi-table {
-        font-size: 0.825rem;
-        margin-bottom: 0;
-    }
-    .pbi-table thead th {
-        background-color: #f8fafc;
-        color: #475569;
-        font-size: 0.74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border-bottom: 1px solid var(--pbi-border);
-        padding: 0.65rem 0.85rem;
-        white-space: nowrap;
-    }
-    .pbi-table tbody td {
-        padding: 0.6rem 0.85rem;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
-    }
-    .pbi-table tbody tr:hover td {
-        background-color: #f8fafc;
-    }
-    .pbi-badge {
-        font-size: 0.72rem;
-        font-weight: 600;
-        padding: 0.25rem 0.55rem;
-        border-radius: 4px;
+    /* ============ Badges ============ */
+    .mes-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.3rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .mes-badge-teal  { background: var(--mes-teal-soft);  color: var(--mes-teal-hover); }
+    .mes-badge-amber { background: var(--mes-amber-soft); color: var(--mes-amber-text); }
+    .mes-badge-red   { background: var(--mes-danger-soft); color: var(--mes-danger-text); }
+    .mes-badge-cpu        { background: var(--mes-teal-soft); color: var(--mes-teal-hover); }
+    .mes-badge-soplado    { background: #CFFAFE; color: #0E7490; }
+    .mes-badge-portatiles { background: #EDE9FE; color: #6D28D9; }
+
+    /* ============ Segmented control ============ */
+    .mes-segmented {
+        display: inline-flex;
+        background-color: var(--mes-item-bg);
+        border: 1px solid var(--mes-border);
+        border-radius: 999px;
+        padding: 4px;
+        gap: 2px;
+    }
+    .mes-segmented .mes-seg-btn {
+        border: 0;
+        background: transparent;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background-color .18s ease, color .18s ease, box-shadow .18s ease;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    .mes-segmented .mes-seg-btn:not(.bg-teal):hover { color: var(--mes-text) !important; background: rgba(0,0,0,.04); }
+    .mes-segmented .mes-seg-btn.bg-teal { font-weight: 600; box-shadow: 0 2px 8px rgba(0, 182, 155, 0.35); }
+
+    /* ============ Cronograma ============ */
+    .pbi-schedule-item {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1.8fr) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 1rem;
+        background-color: var(--mes-item-bg);
+        border: 1px solid transparent;
+        border-radius: var(--mes-radius-item);
+        padding: 0.85rem 1.1rem;
+        transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+        animation: mesFadeUp .35s ease both;
+    }
+    .pbi-schedule-item:hover {
+        background-color: #EAF0F6;
+        border-color: var(--mes-border);
+        transform: translateX(2px);
+    }
+    .pbi-time { font-size: 1.05rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .pbi-time-label { font-size: 0.68rem; color: var(--mes-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+    .pbi-plate { font-weight: 700; font-size: 0.95rem; word-break: break-word; }
+    .pbi-serial { font-size: 0.74rem; color: var(--mes-muted); }
+    .pbi-analyst { font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: .5rem; min-width: 0; }
+    .pbi-avatar {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: var(--mes-teal-soft); color: var(--mes-teal-hover);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: .7rem; font-weight: 600; flex-shrink: 0;
+    }
+    .pbi-analyst span.txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .btn-mes-outline {
+        border: 1px solid var(--mes-border);
+        background: var(--mes-card-bg);
+        color: var(--mes-text);
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.4rem 1rem;
+        transition: all .18s ease;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+    .btn-mes-outline:hover { border-color: var(--mes-teal); color: var(--mes-teal-hover); background: var(--mes-teal-soft); }
+    .btn-mes-outline.disabled { opacity: .5; pointer-events: none; }
+
+    .btn-mes-teal {
+        background-color: var(--mes-teal);
+        border: 0;
+        color: #fff;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        box-shadow: 0 6px 16px rgba(0, 182, 155, 0.28);
+        transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+    .btn-mes-teal:hover, .btn-mes-teal:focus, .btn-mes-teal.show {
+        background-color: var(--mes-teal-hover);
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(0, 158, 134, 0.35);
+    }
+
+    /* ============ Líneas técnicas ============ */
+    .mes-line-card {
+        background-color: var(--mes-item-bg);
+        border-radius: var(--mes-radius-item);
+        padding: 1rem 1.1rem;
+        transition: background-color .18s ease;
+    }
+    .mes-line-card:hover { background-color: #EAF0F6; }
+    .mes-line-ic {
+        width: 32px; height: 32px; border-radius: 10px;
+        background: var(--mes-card-bg); color: var(--mes-teal);
+        display: inline-flex; align-items: center; justify-content: center; font-size: .85rem;
+        border: 1px solid var(--mes-border);
+    }
+    .mes-progress { height: 8px; background-color: #E2E8F0; border-radius: 999px; overflow: hidden; }
+    .mes-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--mes-teal), #1AD1B5);
+        border-radius: 999px;
+        transition: width .6s cubic-bezier(.22, 1, .36, 1);
+    }
+
+    .mes-pager { border-top: 1px solid var(--mes-border); }
+    .mes-empty { text-align: center; padding: 2.5rem 1rem; color: var(--mes-muted); }
+    .mes-empty i { font-size: 1.75rem; display: block; margin-bottom: .6rem; opacity: .6; }
+
+    @keyframes mesFadeUp {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 767.98px) {
+        .pbi-schedule-item { grid-template-columns: 60px minmax(0, 1fr); row-gap: .6rem; }
+        .pbi-schedule-item .pbi-analyst,
+        .pbi-schedule-item .pbi-action { grid-column: 2; }
+        .mes-kpi-value { font-size: 2rem; }
     }
 </style>
 @endsection
 
 @section('content')
+@php
+    $delta = (float) ($deltaSemanal ?? 0);
+    $deltaPositivo = $delta >= 0;
+    // $periodo proviene de request('periodo', 'dia') normalizado en el controlador
+    $periodoActivo = $periodo;
+    $segmentos = ['dia' => 'Hoy', 'semana' => 'Esta Semana', 'mes' => 'Este Mes'];
+    $filtrosExtra = array_filter(['analista_id' => request('analista_id')]);
+@endphp
 
-<!-- 1. CABECERA EJECUTIVA (ESTILO CANVAS POWER BI) -->
-<div class="pbi-canvas-header mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-    <div class="d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-column text-primary fs-5"></i>
-        <div>
-            <h1 class="pbi-canvas-title">DASHBOARD OPERATIVO Y CONTROL DE EQUIPOS</h1>
-            <div class="text-muted d-flex align-items-center gap-2 flex-wrap" style="font-size: 0.74rem;">
-                <span id="labelPeriodoActivo"><i class="fa-regular fa-calendar-check text-primary me-1"></i>{{ $labelPeriodo }}</span>
-                <span id="labelAnalistaActivo" class="badge {{ !empty($nombreAnalista) ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'd-none' }}">
-                    <i class="fa-solid fa-user-check me-1"></i>{{ $nombreAnalista ?? '' }}
-                </span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 2. FILA SUPERIOR DE KPIS (TARJETAS ESTILO POWER BI CARD) -->
-<div class="row g-3 mb-3">
-    <!-- KPI 1: Total Máquinas Ingresadas -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="pbi-kpi-card h-100">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h2 class="pbi-kpi-val" id="kpiTotalCargados">{{ number_format((int)$statsInventario['total_cargados']) }}</h2>
-                    <div class="pbi-kpi-label">Total Máquinas Ingresadas</div>
-                </div>
-                <div class="pbi-kpi-icon pbi-icon-blue">
-                    <i class="fa-solid fa-boxes-stacked"></i>
-                </div>
-            </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
-                <span class="text-muted">Cargadas en inventario</span>
-                <span class="text-primary fw-semibold" id="kpiBadgeTraslados">{{ $totalTraslados }} Traslados</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI 2: Máquinas Intervenidas -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="pbi-kpi-card h-100">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h2 class="pbi-kpi-val text-success" id="kpiIntervenidos">{{ number_format((int)$statsInventario['total_intervenidos']) }}</h2>
-                    <div class="pbi-kpi-label">Máquinas Intervenidas</div>
-                </div>
-                <div class="pbi-kpi-icon pbi-icon-teal">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-            </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
-                <span class="text-muted">Atendidas en taller</span>
-                <span class="text-success fw-semibold" id="kpiPorcentajeIntervenidas">{{ $statsInventario['porcentaje'] }}% Atendido</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI 3: Pendientes por Intervenir -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="pbi-kpi-card h-100">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h2 class="pbi-kpi-val text-warning-emphasis" id="kpiPendientes">{{ number_format((int)$statsInventario['pendientes']) }}</h2>
-                    <div class="pbi-kpi-label">Pendientes por Intervenir</div>
-                </div>
-                <div class="pbi-kpi-icon pbi-icon-amber">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
-            </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
-                <span class="text-muted">En cola de taller</span>
-                <span class="text-warning-emphasis fw-semibold" id="kpiBadgePendientes">Por Atender</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI 4: Total Intervenciones Taller -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="pbi-kpi-card h-100">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h2 class="pbi-kpi-val" style="color: var(--pbi-purple);" id="kpiTotalIntervenciones">{{ number_format((int)$totalIntervenciones) }}</h2>
-                    <div class="pbi-kpi-label">Total Intervenciones Taller</div>
-                </div>
-                <div class="pbi-kpi-icon pbi-icon-purple">
-                    <i class="fa-solid fa-screwdriver-wrench"></i>
-                </div>
-            </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
-                <span class="text-muted">Total registros en bitácoras</span>
-                <span class="text-muted fw-semibold" id="kpiBadgeAnalistas">{{ number_format((int)$totalAnalistas) }} Analistas</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 3. DISTRIBUCIÓN GRÁFICA Y ANALÍTICA CENTRAL -->
-<div class="row g-3 mb-3">
-    <!-- GRÁFICO 1: DISTRIBUCIÓN DE TRABAJO POR LÍNEA TÉCNICA -->
-    <div class="col-12 col-lg-7">
-        <div class="pbi-widget h-100 d-flex flex-column justify-content-between">
-            <div class="pbi-widget-header">
-                <div>
-                    <h2 class="pbi-widget-title">Distribución de Trabajo por Línea Técnica</h2>
-                    <div class="text-muted" style="font-size: 0.72rem;">Diagnóstico CPU, Mantenimiento Soplado y Diagnóstico Portátiles</div>
-                </div>
-                <span class="badge bg-light text-secondary border fw-semibold" style="font-size: 0.72rem;" id="badgeTotalIntervencionesGrafico">
-                    {{ number_format((int)$totalIntervenciones) }} Registros
-                </span>
-            </div>
-            
-            <div class="p-3 flex-grow-1 d-flex flex-column justify-content-between">
-                <div class="pbi-chart-container" style="min-height: 220px; max-height: 240px;">
-                    <canvas id="chartLineasTecnicas"></canvas>
-                </div>
-                
-                <!-- Micro-métricas de soporte estilo Power BI -->
-                <div class="row g-2 pt-2 mt-2 border-top text-center" style="font-size: 0.75rem;">
-                    <div class="col-4">
-                        <span class="text-muted d-block" style="font-size: 0.7rem;">DIAGNÓSTICO CPU</span>
-                        <strong class="text-primary" id="metricEqVal">{{ number_format((int)$totalEquipos) }}</strong>
-                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricEqPct">({{ $porcEq }}%)</span>
-                    </div>
-                    <div class="col-4 border-start border-end">
-                        <span class="text-muted d-block" style="font-size: 0.7rem;">SOPLADO</span>
-                        <strong style="color: var(--pbi-cyan);" id="metricSpVal">{{ number_format((int)$totalSoplado) }}</strong>
-                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricSpPct">({{ $porcSp }}%)</span>
-                    </div>
-                    <div class="col-4">
-                        <span class="text-muted d-block" style="font-size: 0.7rem;">DIAGNÓSTICO PORTÁTILES</span>
-                        <strong style="color: var(--pbi-purple);" id="metricPtVal">{{ number_format((int)$totalPortatiles) }}</strong>
-                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricPtPct">({{ $porcPt }}%)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- GRÁFICO 2: TASA DE CUMPLIMIENTO / EFECTIVIDAD DE INTERVENCIÓN -->
-    <div class="col-12 col-lg-5">
-        <div class="pbi-widget h-100 d-flex flex-column justify-content-between">
-            <div class="pbi-widget-header">
-                <div>
-                    <h2 class="pbi-widget-title">Tasa de Cumplimiento / Efectividad</h2>
-                    <div class="text-muted" style="font-size: 0.72rem;">Porcentaje atendido vs máquinas restantes en taller</div>
-                </div>
-                <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size: 0.72rem;" id="badgeTasaCumplimiento">
-                    {{ $statsInventario['porcentaje'] }}% Cumplimiento
-                </span>
-            </div>
-
-            <div class="p-3 flex-grow-1 d-flex flex-column justify-content-between">
-                <!-- Donut con etiqueta central estilo Power BI -->
-                <div class="pbi-chart-container d-flex align-items-center justify-content-center" style="min-height: 200px; max-height: 220px;">
-                    <canvas id="chartCumplimiento" style="max-height: 200px;"></canvas>
-                    <div class="pbi-donut-center">
-                        <div class="pbi-donut-val text-success" id="donutCenterPct">{{ $statsInventario['porcentaje'] }}%</div>
-                        <div class="pbi-donut-lbl">Atendido</div>
-                    </div>
-                </div>
-
-                <!-- Resumen analítico inferior -->
-                <div class="pt-2 mt-2 border-top">
-                    <div class="progress mb-2" style="height: 6px; border-radius: 4px; background-color: #f1f5f9;">
-                        <div class="progress-bar bg-success" id="progresoCumplimientoBar" style="width: {{ (float)$statsInventario['porcentaje'] }}%;"></div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center" style="font-size: 0.75rem;">
-                        <span class="text-muted">
-                            <i class="fa-solid fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
-                            Intervenidas: <strong class="text-dark" id="txtIntervenidasMini">{{ number_format((int)$statsInventario['total_intervenidos']) }}</strong>
-                        </span>
-                        <span class="text-muted">
-                            <i class="fa-solid fa-circle text-warning me-1" style="font-size: 0.6rem;"></i>
-                            Pendientes: <strong class="text-dark" id="txtPendientesMini">{{ number_format((int)$statsInventario['pendientes']) }}</strong>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 4. TABLA ANALÍTICA INFERIOR (ESTILO MATRIZ DE POWER BI) -->
-<div class="pbi-widget mb-4">
-    <div class="pbi-widget-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-        <div>
-            <h2 class="pbi-widget-title text-uppercase m-0">MATRIZ ANALÍTICA DE MÁQUINAS INTERVENIDAS</h2>
-            <div class="text-muted" style="font-size: 0.72rem;">Registro cronológico y auditoría técnica de equipos atendidos</div>
-        </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <!-- Selector de Período Reubicado -->
-            <div class="d-flex align-items-center gap-1">
-                <label for="filtroPeriodoMatrizSelect" class="small fw-semibold text-secondary mb-0 d-none d-sm-inline-flex align-items-center gap-1">
-                    <i class="fa-solid fa-calendar-days text-muted"></i>
-                </label>
-                <select id="filtroPeriodoMatrizSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(this.value, null, 1)">
-                    <option value="dia" {{ $periodo === 'dia' ? 'selected' : '' }}>Hoy</option>
-                    <option value="semana" {{ $periodo === 'semana' ? 'selected' : '' }}>Esta Semana</option>
-                    <option value="mes" {{ $periodo === 'mes' ? 'selected' : '' }}>Este Mes</option>
-                    <option value="anio" {{ $periodo === 'anio' ? 'selected' : '' }}>Este Año</option>
-                    <option value="todos" {{ $periodo === 'todos' ? 'selected' : '' }}>Histórico Completo</option>
-                </select>
-            </div>
-            <!-- Contador Dinámico de Máquinas Intervenidas -->
-            <span class="badge bg-light text-secondary border px-3 py-2 fw-normal text-nowrap" style="font-size: 0.8rem;">
-                Total: <strong id="tablaCountBadge" class="text-dark">{{ $maquinasIntervenidas->total() }}</strong> máquinas intervenidas
+<!-- Encabezado -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="mes-title fs-4">Dashboard Operativo</h1>
+        <p class="mes-subtitle">
+            <i class="fa-regular fa-calendar-check text-teal me-1"></i><span id="labelPeriodoActivo">{{ $labelPeriodo }}</span>
+            <span id="labelAnalistaActivo" class="mes-badge mes-badge-teal ms-2 {{ empty($nombreAnalista) ? 'd-none' : '' }}">
+                <i class="fa-solid fa-user-check"></i><span id="labelAnalistaTxt">{{ $nombreAnalista ?? '' }}</span>
             </span>
+        </p>
+    </div>
+</div>
+
+<!-- 2. FILA SUPERIOR · KPIs -->
+<div class="row g-3 mb-4">
+    <!-- KPI 1 -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="mes-card mes-kpi h-100">
+            <div class="d-flex align-items-start gap-3">
+                <div class="mes-kpi-icon"><i class="fa-regular fa-calendar-check"></i></div>
+                <div class="min-w-0">
+                    <p class="mes-kpi-label">Máquinas Ingresadas</p>
+                    <p class="mes-kpi-value" id="kpiTotalCargados">{{ number_format((int) $statsInventario['total_cargados']) }}</p>
+                    <p class="mes-kpi-sub" id="kpiSubPeriodo">{{ $labelPeriodo }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table pbi-table align-middle">
-            <thead>
-                <tr>
-                    <th style="width: 70px;">ID</th>
-                    <th style="width: 280px;">Equipo / Serial</th>
-                    <th style="width: 220px;">Módulo</th>
-                    <th style="width: 220px;">Analista</th>
-                    <th style="width: 170px;">Fecha Intervención</th>
-                </tr>
-            </thead>
-            <tbody id="tbodyMatrizOperativa">
-                @if (!empty($maquinasIntervenidas))
-                    @foreach ($maquinasIntervenidas as $m)
-                        <tr>
-                            <td class="text-muted font-monospace">{{ $m['id'] }}</td>
-                            <td>
-                                <div class="fw-semibold text-dark font-monospace" style="font-size: 0.84rem;">
-                                    {{ $m['identificador_1'] ?: ($m['placa_id'] ?? '—') }}
-                                </div>
-                                <div class="text-muted font-monospace" style="font-size: 0.74rem;">
-                                    <i class="fa-solid fa-barcode text-secondary opacity-75 me-1"></i>{{ $m['identificador_2'] ?: ($m['serial'] ?? '—') }}
-                                </div>
-                            </td>
-                            <td>
-                                @php 
-                                    $mod = strtolower((string)($m['modulo_intervencion'] ?? ''));
-                                    if (str_contains($mod, 'portat') || str_contains($mod, 'laptop')) {
-                                        $badgeClass = 'bg-purple-subtle text-purple border';
-                                        $icono = 'fa-laptop';
-                                        $labelMod = 'Diagnóstico Portátiles';
-                                        $style = 'background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;';
-                                    } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
-                                        $badgeClass = 'bg-info-subtle text-info border border-info-subtle';
-                                        $icono = 'fa-wind';
-                                        $labelMod = 'Soplado';
-                                        $style = '';
-                                    } else {
-                                        $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                        $icono = 'fa-desktop';
-                                        $labelMod = 'Diagnóstico CPU';
-                                        $style = '';
-                                    }
-                                @endphp
-                                <span class="pbi-badge {{ $badgeClass }}" style="{{ $style }}">
-                                    <i class="fa-solid {{ $icono }}"></i>
-                                    <span>{{ $labelMod }}</span>
-                                </span>
-                            </td>
-                            <td>
-                                @if (!empty($m['analista_intervencion']))
-                                    <span class="text-dark">
-                                        <i class="fa-regular fa-user text-muted me-1"></i>{{ $m['analista_intervencion'] }}
-                                    </span>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                            <td class="text-muted">
-                                @if (!empty($m['fecha_intervencion']))
-                                    <i class="fa-regular fa-clock me-1 text-secondary opacity-75"></i>{{ date('d/m/Y H:i', strtotime((string)$m['fecha_intervencion'])) }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                        </tr>
+    <!-- KPI 2 -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="mes-card mes-kpi h-100">
+            <div class="d-flex align-items-start gap-3">
+                <div class="mes-kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="min-w-0">
+                    <p class="mes-kpi-label">Efectividad Taller</p>
+                    <p class="mes-kpi-value"><span id="kpiPorcentaje">{{ $statsInventario['porcentaje'] }}</span>%</p>
+                    <span id="kpiDeltaBadge" class="mes-badge {{ $deltaPositivo ? 'mes-badge-teal' : 'mes-badge-red' }}">
+                        <i class="fa-solid {{ $deltaPositivo ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i>
+                        <span id="kpiDeltaTxt">{{ $deltaPositivo ? '+' : '' }}{{ $delta }}% vs semana anterior</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 3 -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="mes-card mes-kpi h-100">
+            <div class="d-flex align-items-start gap-3">
+                <div class="mes-kpi-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="min-w-0">
+                    <p class="mes-kpi-label">Analistas Activos</p>
+                    <p class="mes-kpi-value">
+                        <span id="kpiAnalistasActivos">{{ (int) $analistasActivosHoy }}</span>
+                        <small>/ <span id="kpiAnalistasTotal">{{ (int) $totalAnalistas }}</span></small>
+                    </p>
+                    <p class="mes-kpi-sub">Turno actual</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI 4 -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="mes-card mes-kpi h-100">
+            <div class="d-flex align-items-start gap-3">
+                <div class="mes-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="min-w-0">
+                    <p class="mes-kpi-label">Equipos Pendientes / Baja</p>
+                    <p class="mes-kpi-value" id="kpiPendientes">{{ number_format((int) $statsInventario['pendientes']) }}</p>
+                    <span class="mes-badge mes-badge-amber">
+                        <i class="fa-solid fa-circle-exclamation"></i>Requiere atención
+                        <span class="opacity-75">· <span id="kpiBaja">{{ (int) $totalBaja }}</span> en baja</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. CUADRÍCULA PRINCIPAL -->
+<div class="row g-3 mb-4">
+    <!-- A. Cronograma de Intervenciones -->
+    <div class="col-12 col-lg-8">
+        <div class="mes-card h-100 d-flex flex-column">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 pb-3">
+                <div>
+                    <h2 class="mes-title">Cronograma de Intervenciones</h2>
+                    <p class="mes-subtitle">Registro de máquinas atendidas ·
+                        <span id="tablaCountBadge" class="fw-semibold text-dark">{{ $maquinasIntervenidas->total() }}</span> en total</p>
+                </div>
+
+                <nav class="mes-segmented" aria-label="Filtro de período" id="segmentedPeriodo">
+                    @foreach ($segmentos as $valor => $texto)
+                        <a href="{{ route('dashboard', array_merge($filtrosExtra, ['periodo' => $valor])) }}"
+                           data-periodo="{{ $valor }}"
+                           class="mes-seg-btn text-decoration-none {{ $periodoActivo === $valor ? 'bg-teal text-white' : 'text-muted' }}"
+                           @if ($periodoActivo === $valor) aria-current="page" @endif>{{ $texto }}</a>
                     @endforeach
-                @else
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-4">
-                            <i class="fa-solid fa-filter-circle-xmark fs-4 text-muted mb-2 d-block"></i>
-                            <span class="fw-semibold">No se encontraron máquinas intervenidas para los filtros seleccionados.</span>
-                        </td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-    </div>
+                </nav>
+            </div>
 
-    <!-- Paginación compacta estilo Power BI con Query Strings consistentes -->
-    <div class="pbi-widget-footer p-2 px-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-radius: 0 0 8px 8px;">
-        <div class="text-muted small" style="font-size: 0.75rem;">
-            <span id="pagiInfoText">
-                Mostrando página <strong id="pagiCurrentPage">{{ $maquinasIntervenidas->currentPage() }}</strong> de <strong id="pagiTotalPages">{{ $maquinasIntervenidas->lastPage() }}</strong> (<span id="pagiTotalReg">{{ $maquinasIntervenidas->total() }}</span> registros)
-            </span>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            @if ($maquinasIntervenidas->hasPages())
-                <div class="d-none">
-                    {{ $maquinasIntervenidas->withQueryString()->links() }}
+            <div class="px-4 pb-3 flex-grow-1">
+                <div class="d-flex flex-column gap-2" id="listaCronograma">
+                    @forelse ($maquinasIntervenidas as $m)
+                        @php
+                            $placa = $m['placa'];
+                            $serial = $m['serial'];
+                            $analista = trim((string) ($m['analista_intervencion'] ?? ''));
+                            $partes = preg_split('/\s+/', $analista, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                            $iniciales = $analista !== ''
+                                ? mb_strtoupper(mb_substr($partes[0], 0, 1) . (count($partes) > 1 ? mb_substr(end($partes), 0, 1) : ''))
+                                : '?';
+                        @endphp
+                        <div class="pbi-schedule-item">
+                            <div>
+                                <div class="pbi-time">{{ $m['hora'] }}</div>
+                                <div class="pbi-time-label">Hora</div>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="pbi-plate">{{ $placa }}</div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                    <span class="mes-badge mes-badge-{{ $m['modulo'] }}">{{ $m['modulo_label'] }}</span>
+                                    <span class="mes-badge mes-badge-{{ $m['estado_tono'] }}">{{ $m['estado_label'] }}</span>
+                                    <span class="pbi-serial"><i class="fa-solid fa-barcode me-1"></i>{{ $serial }}</span>
+                                </div>
+                            </div>
+                            <div class="pbi-analyst">
+                                @if ($analista !== '')
+                                    <span class="pbi-avatar">{{ $iniciales }}</span>
+                                    <span class="txt">{{ $analista }}</span>
+                                @else
+                                    <span class="text-muted">Sin analista</span>
+                                @endif
+                            </div>
+                            <div class="pbi-action text-md-end">
+                                @if (!empty($m['detalle_url']))
+                                    <a href="{{ $m['detalle_url'] }}" class="btn-mes-outline d-inline-block">Ver Detalle</a>
+                                @else
+                                    <span class="btn-mes-outline d-inline-block disabled">Ver Detalle</span>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="mes-empty">
+                            <i class="fa-regular fa-calendar-xmark"></i>
+                            <span class="fw-semibold">No hay intervenciones registradas para este período.</span>
+                        </div>
+                    @endforelse
                 </div>
-            @endif
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiPrev" onclick="cambiarPagina(paginaActual - 1)" {{ ($maquinasIntervenidas->currentPage() <= 1) ? 'disabled' : '' }}>
-                    <i class="fa-solid fa-chevron-left me-1"></i> Anterior
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiNext" onclick="cambiarPagina(paginaActual + 1)" {{ ($maquinasIntervenidas->currentPage() >= $maquinasIntervenidas->lastPage()) ? 'disabled' : '' }}>
-                    Siguiente <i class="fa-solid fa-chevron-right ms-1"></i>
-                </button>
+            </div>
+
+            <div class="mes-pager px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="text-muted small">
+                    Mostrando {{ $maquinasIntervenidas->firstItem() ?? 0 }}–{{ $maquinasIntervenidas->lastItem() ?? 0 }}
+                    de {{ $maquinasIntervenidas->total() }} registros
+                </span>
+                @if ($maquinasIntervenidas->hasPages())
+                    {{ $maquinasIntervenidas->links() }}
+                @endif
             </div>
         </div>
     </div>
-</div>
 
-@endsection
+    <!-- B. Rendimiento de Líneas Técnicas -->
+    <div class="col-12 col-lg-4">
+        <div class="mes-card h-100 d-flex flex-column p-4">
+            <div class="mb-3">
+                <h2 class="mes-title">Disponibilidad y Capacidad</h2>
+                <p class="mes-subtitle">Rendimiento de líneas técnicas · <span id="lineasPeriodoTxt">{{ $labelPeriodo }}</span></p>
+            </div>
 
-@section('scripts')
-<!-- Chart.js 4.4.1 -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-let chartLineas = null;
-let chartCumplimientoInst = null;
-let periodoActual = '{{ $periodo }}';
-let analistaActual = '{{ $analista_id ?? 'todos' }}';
-let paginaActual = {{ $maquinasIntervenidas->currentPage() }};
-let totalPaginas = {{ $maquinasIntervenidas->lastPage() }};
-let totalRegistros = {{ $maquinasIntervenidas->total() }};
-
-// Configuración inicial de datos analíticos
-const dataAnalytics = {
-    lineas: {
-        labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Diagnóstico Portátiles'],
-        valores: [{{ (int)$totalEquipos }}, {{ (int)$totalSoplado }}, {{ (int)$totalPortatiles }}]
-    },
-    cumplimiento: {
-        intervenidos: {{ (int)$statsInventario['total_intervenidos'] }},
-        pendientes: {{ (int)$statsInventario['pendientes'] }},
-        porcentaje: {{ (float)$statsInventario['porcentaje'] }}
-    }
-};
-
-/**
- * Renderiza el gráfico de barras horizontales de distribución técnica
- */
-function renderizarGraficoLineas() {
-    const ctx = document.getElementById('chartLineasTecnicas');
-    if (!ctx) return;
-
-    if (chartLineas) {
-        chartLineas.destroy();
-    }
-
-    chartLineas = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: dataAnalytics.lineas.labels,
-            datasets: [{
-                label: 'Intervenciones',
-                data: dataAnalytics.lineas.valores,
-                backgroundColor: ['#0078d4', '#00bcf2', '#7c3aed'],
-                borderRadius: 4,
-                borderSkipped: false,
-                barThickness: 22
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1e293b',
-                    titleFont: { size: 12, weight: 'bold' },
-                    bodyFont: { size: 11 },
-                    padding: 10,
-                    cornerRadius: 6,
-                    callbacks: {
-                        label: function(ctx) {
-                            const val = ctx.raw || 0;
-                            const total = dataAnalytics.lineas.valores.reduce((a, b) => a + b, 0);
-                            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                            return ` Total: ${val.toLocaleString()} (${pct}%)`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: '#f1f5f9',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        font: { size: 11 },
-                        color: '#64748b'
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        font: { size: 11, weight: '600' },
-                        color: '#334155'
-                    }
-                }
-            },
-            animation: { duration: 500 }
-        }
-    });
-}
-
-/**
- * Renderiza el Donut minimalista de cumplimiento estilo Power BI
- */
-function renderizarGraficoCumplimiento() {
-    const ctx = document.getElementById('chartCumplimiento');
-    if (!ctx) return;
-
-    if (chartCumplimientoInst) {
-        chartCumplimientoInst.destroy();
-    }
-
-    const intervenidos = dataAnalytics.cumplimiento.intervenidos;
-    const pendientes = dataAnalytics.cumplimiento.pendientes;
-    const total = intervenidos + pendientes;
-
-    const datasetValues = total > 0 ? [intervenidos, pendientes] : [0, 1];
-    const datasetColors = total > 0 ? ['#10b981', '#f1f5f9'] : ['#e2e8f0', '#f8fafc'];
-
-    chartCumplimientoInst = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Intervenidas', 'Pendientes'],
-            datasets: [{
-                data: datasetValues,
-                backgroundColor: datasetColors,
-                borderWidth: 2,
-                borderColor: '#ffffff',
-                hoverOffset: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '78%',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    enabled: total > 0,
-                    backgroundColor: '#1e293b',
-                    titleFont: { size: 12, weight: 'bold' },
-                    bodyFont: { size: 11 },
-                    padding: 10,
-                    cornerRadius: 6,
-                    callbacks: {
-                        label: function(ctx) {
-                            const val = ctx.raw || 0;
-                            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                            return ` ${ctx.label}: ${val.toLocaleString()} (${pct}%)`;
-                        }
-                    }
-                }
-            },
-            animation: {
-                animateScale: true,
-                duration: 500
-            }
-        }
-    });
-}
-
-/**
- * Filtro Asíncrono de Periodo, Analista y Paginación
- */
-function aplicarFiltros(nuevoPeriodo = null, nuevoAnalista = null, nuevaPagina = null) {
-    if (nuevoPeriodo !== null) {
-        periodoActual = nuevoPeriodo;
-        paginaActual = 1;
-        const sMatriz = document.getElementById('filtroPeriodoMatrizSelect');
-        if (sMatriz && sMatriz.value !== periodoActual) sMatriz.value = periodoActual;
-    }
-    if (nuevoAnalista !== null) {
-        analistaActual = nuevoAnalista;
-        paginaActual = 1;
-    }
-    if (nuevaPagina !== null) {
-        paginaActual = nuevaPagina;
-    }
-
-    const labelPeriodo = document.getElementById('labelPeriodoActivo');
-    if (labelPeriodo) {
-        labelPeriodo.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Actualizando métricas...`;
-    }
-
-    let url = '{{ route("dashboard.metricas") }}?periodo=' + encodeURIComponent(periodoActual);
-    if (analistaActual && analistaActual !== 'todos') {
-        url += '&analista_id=' + encodeURIComponent(analistaActual);
-    }
-    url += '&page=' + encodeURIComponent(paginaActual);
-
-    fetch(url, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status !== 'success') return;
-
-        periodoActual = data.periodo;
-        analistaActual = data.analista_id ? String(data.analista_id) : 'todos';
-        paginaActual = data.pagina_actual;
-        totalPaginas = data.total_paginas;
-        totalRegistros = data.total_registros;
-
-        if (labelPeriodo) {
-            labelPeriodo.innerHTML = `<i class="fa-regular fa-calendar-check text-primary me-1"></i> ${escapeHtml(data.labelPeriodo)}`;
-        }
-
-        const labelAnalista = document.getElementById('labelAnalistaActivo');
-        if (labelAnalista) {
-            if (data.nombreAnalista) {
-                labelAnalista.className = 'badge bg-primary-subtle text-primary border border-primary-subtle';
-                labelAnalista.innerHTML = `<i class="fa-solid fa-user-check me-1"></i>${escapeHtml(data.nombreAnalista)}`;
-            } else {
-                labelAnalista.className = 'd-none';
-                labelAnalista.innerHTML = '';
-            }
-        }
-
-        const selectPeriodoMatriz = document.getElementById('filtroPeriodoMatrizSelect');
-        if (selectPeriodoMatriz && selectPeriodoMatriz.value !== periodoActual) {
-            selectPeriodoMatriz.value = periodoActual;
-        }
-
-        const kpiCargados = document.getElementById('kpiTotalCargados');
-        if (kpiCargados) kpiCargados.textContent = Number(data.statsInventario.total_cargados).toLocaleString();
-
-        const kpiInterv = document.getElementById('kpiIntervenidos');
-        if (kpiInterv) kpiInterv.textContent = Number(data.statsInventario.total_intervenidos).toLocaleString();
-
-        const kpiPct = document.getElementById('kpiPorcentajeIntervenidas');
-        if (kpiPct) kpiPct.textContent = `${data.statsInventario.porcentaje}% Atendido`;
-
-        const kpiPend = document.getElementById('kpiPendientes');
-        if (kpiPend) kpiPend.textContent = Number(data.statsInventario.pendientes).toLocaleString();
-
-        const kpiTot = document.getElementById('kpiTotalIntervenciones');
-        if (kpiTot) kpiTot.textContent = Number(data.totalIntervenciones).toLocaleString();
-
-        const badgeGraf = document.getElementById('badgeTotalIntervencionesGrafico');
-        if (badgeGraf) badgeGraf.textContent = `${Number(data.totalIntervenciones).toLocaleString()} Registros`;
-
-        const mEq = document.getElementById('metricEqVal');
-        if (mEq) mEq.textContent = Number(data.totalEquipos).toLocaleString();
-        const mEqP = document.getElementById('metricEqPct');
-        if (mEqP) mEqP.textContent = `(${data.porcEq}%)`;
-
-        const mSp = document.getElementById('metricSpVal');
-        if (mSp) mSp.textContent = Number(data.totalSoplado).toLocaleString();
-        const mSpP = document.getElementById('metricSpPct');
-        if (mSpP) mSpP.textContent = `(${data.porcSp}%)`;
-
-        const mPt = document.getElementById('metricPtVal');
-        if (mPt) mPt.textContent = Number(data.totalPortatiles).toLocaleString();
-        const mPtP = document.getElementById('metricPtPct');
-        if (mPtP) mPtP.textContent = `(${data.porcPt}%)`;
-
-        dataAnalytics.lineas.valores = [data.totalEquipos, data.totalSoplado, data.totalPortatiles];
-        renderizarGraficoLineas();
-
-        dataAnalytics.cumplimiento.intervenidos = data.statsInventario.total_intervenidos;
-        dataAnalytics.cumplimiento.pendientes = data.statsInventario.pendientes;
-        dataAnalytics.cumplimiento.porcentaje = data.statsInventario.porcentaje;
-
-        const donutVal = document.getElementById('donutCenterPct');
-        if (donutVal) donutVal.textContent = `${data.statsInventario.porcentaje}%`;
-
-        const badgeCumpl = document.getElementById('badgeTasaCumplimiento');
-        if (badgeCumpl) badgeCumpl.textContent = `${data.statsInventario.porcentaje}% Cumplimiento`;
-
-        const progBar = document.getElementById('progresoCumplimientoBar');
-        if (progBar) progBar.style.width = `${data.statsInventario.porcentaje}%`;
-
-        const txtIntMini = document.getElementById('txtIntervenidasMini');
-        if (txtIntMini) txtIntMini.textContent = Number(data.statsInventario.total_intervenidos).toLocaleString();
-
-        const txtPendMini = document.getElementById('txtPendientesMini');
-        if (txtPendMini) txtPendMini.textContent = Number(data.statsInventario.pendientes).toLocaleString();
-
-        renderizarGraficoCumplimiento();
-
-        actualizarMatrizMaquinas(data.maquinasIntervenidas);
-
-        actualizarControlesPaginacion(data.pagina_actual, data.total_paginas, data.total_registros);
-
-        if (window.history && window.history.pushState) {
-            let nuevaUrl = window.location.pathname + '?periodo=' + encodeURIComponent(periodoActual);
-            if (analistaActual && analistaActual !== 'todos') {
-                nuevaUrl += '&analista_id=' + encodeURIComponent(analistaActual);
-            }
-            if (paginaActual > 1) {
-                nuevaUrl += '&page=' + encodeURIComponent(paginaActual);
-            }
-            window.history.pushState(null, '', nuevaUrl);
-        }
-    })
-    .catch(err => {
-        console.error('Error al actualizar métricas:', err);
-        if (labelPeriodo) {
-            labelPeriodo.innerHTML = `<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Error al cargar datos</span>`;
-        }
-    });
-}
-
-function cambiarPagina(nuevaPagina) {
-    if (nuevaPagina < 1 || nuevaPagina > totalPaginas || nuevaPagina === paginaActual) return;
-    aplicarFiltros(null, null, nuevaPagina);
-}
-
-function actualizarControlesPaginacion(pActual, tPaginas, tRegistros) {
-    const elCurrent = document.getElementById('pagiCurrentPage');
-    if (elCurrent) elCurrent.textContent = pActual;
-
-    const elTotalP = document.getElementById('pagiTotalPages');
-    if (elTotalP) elTotalP.textContent = tPaginas;
-
-    const elTotalR = document.getElementById('pagiTotalReg');
-    if (elTotalR) elTotalR.textContent = Number(tRegistros).toLocaleString();
-
-    const elBadge = document.getElementById('tablaCountBadge');
-    if (elBadge) elBadge.textContent = Number(tRegistros).toLocaleString();
-
-    const btnPrev = document.getElementById('btnPagiPrev');
-    if (btnPrev) {
-        btnPrev.disabled = (pActual <= 1);
-    }
-
-    const btnNext = document.getElementById('btnPagiNext');
-    if (btnNext) {
-        btnNext.disabled = (pActual >= tPaginas);
-    }
-}
-
-function actualizarMatrizMaquinas(maquinas) {
-    const tbody = document.getElementById('tbodyMatrizOperativa');
-    if (!tbody) return;
-
-    if (!maquinas || maquinas.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center text-muted py-4">
-                    <i class="fa-solid fa-filter-circle-xmark fs-4 text-muted mb-2 d-block"></i>
-                    <span class="fw-semibold">No se encontraron máquinas intervenidas para los filtros seleccionados.</span>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    let html = '';
-    maquinas.forEach(m => {
-        const id1 = escapeHtml(m.identificador_1 || m.placa_id || '—');
-        const id2 = escapeHtml(m.identificador_2 || m.serial || '—');
-
-        let mod = (m.modulo_intervencion || '').toLowerCase();
-        let badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-        let icono = 'fa-desktop';
-        let customStyle = '';
-        let labelMod = 'Diagnóstico CPU';
-
-        if (mod.includes('porta') || mod.includes('laptop')) {
-            badgeClass = 'bg-purple-subtle text-purple border';
-            icono = 'fa-laptop';
-            customStyle = 'style="background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;"';
-            labelMod = 'Diagnóstico Portátiles';
-        } else if (mod.includes('sopla') || mod.includes('limpie')) {
-            badgeClass = 'bg-info-subtle text-info border border-info-subtle';
-            icono = 'fa-wind';
-            labelMod = 'Soplado';
-        } else {
-            badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-            icono = 'fa-desktop';
-            labelMod = 'Diagnóstico CPU';
-        }
-
-        const moduloHtml = `<span class="pbi-badge ${badgeClass}" ${customStyle}><i class="fa-solid ${icono}"></i> <span>${escapeHtml(labelMod)}</span></span>`;
-        const analista = m.analista_intervencion 
-            ? `<span class="text-dark"><i class="fa-regular fa-user text-muted me-1"></i>${escapeHtml(m.analista_intervencion)}</span>` 
-            : '<span class="text-muted">—</span>';
-        const fecha = m.fecha_intervencion 
-            ? `<i class="fa-regular fa-clock me-1 text-secondary opacity-75"></i>${formatearFecha(m.fecha_intervencion)}` 
-            : '—';
-
-        html += `
-            <tr>
-                <td class="text-muted font-monospace">${m.id}</td>
-                <td>
-                    <div class="fw-semibold text-dark font-monospace" style="font-size: 0.84rem;">${id1}</div>
-                    <div class="text-muted font-monospace" style="font-size: 0.74rem;">
-                        <i class="fa-solid fa-barcode text-secondary opacity-75 me-1"></i>${id2}
+            <div class="d-flex flex-column gap-3 flex-grow-1" id="listaLineas">
+                @foreach ($lineas as $l)
+                    @php $porcentajeLinea = $l['pct']; @endphp
+                    <div class="mes-line-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="mes-line-ic"><i class="fa-solid {{ $l['icono'] }}"></i></span>
+                                <span class="fw-semibold" style="font-size:.9rem;">{{ $l['nombre'] }}</span>
+                            </div>
+                            <span class="fw-semibold" style="font-size:.95rem;">{{ number_format($l['total']) }} <span class="text-muted fw-normal">/ {{ number_format($l['capacidad']) }}</span></span>
+                        </div>
+                        <div class="mes-progress"><div class="mes-progress-bar" style="width: {{ $porcentajeLinea }}%;"></div></div>
+                        <div class="text-muted mt-2" style="font-size:.75rem;"><strong class="text-dark">{{ $porcentajeLinea }}%</strong> Utilización</div>
                     </div>
-                </td>
-                <td>${moduloHtml}</td>
-                <td>${analista}</td>
-                <td class="text-muted">${fecha}</td>
-            </tr>
-        `;
-    });
+                @endforeach
+            </div>
 
-    tbody.innerHTML = html;
-}
-
-function formatearFecha(fechaStr) {
-    if (!fechaStr) return '—';
-    const d = new Date(fechaStr.replace(' ', 'T'));
-    if (isNaN(d.getTime())) return fechaStr;
-    const dia = String(d.getDate()).padStart(2, '0');
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const anio = d.getFullYear();
-    const hora = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${dia}/${mes}/${anio} ${hora}:${min}`;
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return String(text).replace(/[&<>"']/g, m => map[m]);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    renderizarGraficoLineas();
-    renderizarGraficoCumplimiento();
-});
-</script>
+            @canany(['cpus.registrar', 'soplado.registrar', 'portatiles.registrar'])
+            <div class="dropdown mt-4">
+                <button class="btn btn-mes-teal w-100" type="button" id="btnRegistrarIntervencion" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa-solid fa-plus me-1"></i> Registrar Intervención
+                </button>
+                <ul class="dropdown-menu w-100 shadow border-0 p-2" style="border-radius:12px;" aria-labelledby="btnRegistrarIntervencion">
+                    @can('cpus.registrar')
+                        <li><a class="dropdown-item rounded-2" href="{{ route('equipos.create') }}"><i class="fa-solid fa-desktop me-2 text-teal"></i>Diagnóstico CPU</a></li>
+                    @endcan
+                    @can('soplado.registrar')
+                        <li><a class="dropdown-item rounded-2" href="{{ route('soplado.create') }}"><i class="fa-solid fa-wind me-2 text-teal"></i>Mantenimiento Soplado</a></li>
+                    @endcan
+                    @can('portatiles.registrar')
+                        <li><a class="dropdown-item rounded-2" href="{{ route('portatiles.create') }}"><i class="fa-solid fa-laptop me-2 text-teal"></i>Portátiles</a></li>
+                    @endcan
+                </ul>
+            </div>
+            @endcanany
+        </div>
+    </div>
+</div>
 @endsection
+

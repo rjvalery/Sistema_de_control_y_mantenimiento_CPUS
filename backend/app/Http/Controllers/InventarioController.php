@@ -15,126 +15,138 @@ class InventarioController extends Controller
      */
     public function buscarEquipo(Request $request)
     {
-        $query = trim($request->input('query') ?? $request->input('termino'));
+        $termino = trim($request->input('query') ?? $request->input('termino'));
+        $modulo = $request->input('modulo', 'diagnostico');
 
-        if ($query === '' || strlen($query) < 3) {
+        if ($termino === '' || strlen($termino) < 3) {
             return response()->json([
                 'encontrado' => false,
                 'mensaje'    => 'Término de búsqueda muy corto (mínimo 3 caracteres).',
             ]);
         }
 
-        $equipo = InventarioGeneral::where('identificador_1', $query)
-            ->orWhere('identificador_2', $query)
-            ->orWhere('placa_id', $query)
-            ->orWhere('serial', $query)
+        // Obtener datos base desde inventario general para autocompletar
+        $inventario = InventarioGeneral::where('identificador_1', $termino)
+            ->orWhere('identificador_2', $termino)
+            ->orWhere('placa_id', $termino)
+            ->orWhere('serial', $termino)
             ->orderBy('id', 'desc')
             ->first();
 
-        // Si se encuentra en inventario general, buscar traslado
-        if ($equipo) {
-            $numTraslado = $equipo->num_traslado;
+        // Obtener traslado si existe en inventario u otras tablas
+        $numTraslado = $inventario ? $inventario->num_traslado : null;
+        if (!$numTraslado) {
+            $terminos = array_filter([$termino, $inventario->placa_id ?? null, $inventario->serial ?? null, $inventario->identificador_1 ?? null, $inventario->identificador_2 ?? null]);
             
-            if (!$numTraslado) {
-                // Buscar en las bitácoras si no tiene traslado en inventario
-                $terminos = array_filter([$query, $equipo->placa_id, $equipo->serial, $equipo->identificador_1, $equipo->identificador_2]);
-                
-                $trasladoEq = Equipo::whereIn('placa_id', $terminos)->whereNotNull('num_traslado')->where('num_traslado', '!=', '')->value('num_traslado');
-                $trasladoSo = SopladoRegistro::whereIn('placa_id', $terminos)->whereNotNull('num_traslado')->where('num_traslado', '!=', '')->value('num_traslado');
-                $trasladoPo = GarantiaPortatil::whereIn('placa_id_equipo', $terminos)->whereNotNull('numero_traslado')->where('numero_traslado', '!=', '')->value('numero_traslado');
+            $trasladoEq = Equipo::whereIn('placa_id', $terminos)
+                ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')->latest('id')->value('num_traslado');
+            
+            $trasladoSo = SopladoRegistro::whereIn('placa_id', $terminos)
+                ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')->latest('id')->value('num_traslado');
+            
+            $trasladoPo = GarantiaPortatil::where(function($q) use ($terminos) {
+                $q->whereIn('placa_id_equipo', $terminos)->orWhereIn('serial_disco', $terminos);
+            })->whereNotNull('numero_traslado')->where('numero_traslado', '!=', '')->latest('id')->value('numero_traslado');
+            
+            $numTraslado = $trasladoEq ?? $trasladoSo ?? $trasladoPo;
+        }
 
-                $numTraslado = $trasladoEq ?? $trasladoSo ?? $trasladoPo;
+        $datosBase = [
+            'id'           => $inventario ? $inventario->id : 0,
+            'placa_id'     => $inventario->placa_id ?? '',
+            'serial'       => $inventario->serial ?? '',
+            'num_traslado' => $numTraslado ?? '',
+            'tipo_equipo'  => $inventario->tipo_equipo ?? 'CPU / Escritorio',
+            'marca'        => $inventario->marca ?? '',
+            'modelo'       => $inventario->modelo ?? '',
+            'ubicacion'    => $inventario->ubicacion ?? '',
+            'estado'       => $inventario->estado ?? '',
+        ];
+
+        // 1. Lógica para el módulo de Soplado
+        if ($modulo === 'soplado') {
+            $sopladoHoy = SopladoRegistro::where('placa_id', $termino)
+                ->whereDate('created_at', \Carbon\Carbon::today('America/Bogota'))->first();
+
+            if ($sopladoHoy) {
+                return response()->json([
+                    'encontrado' => true,
+                    'equipo' => array_merge($datosBase, [
+                        'placa_id'              => $sopladoHoy->placa_id ?: $datosBase['placa_id'],
+                        'alerta'                => 'amarillo',
+                        'mensaje'               => "Atención: Este equipo ya fue soplado hoy por " . $sopladoHoy->nombre_analista,
+                        'intervenido'           => true,
+                        'fecha_intervencion'    => $sopladoHoy->created_at,
+                        'modulo_intervencion'   => 'Soplado',
+                        'analista_intervencion' => $sopladoHoy->nombre_analista,
+                    ])
+                ]);
+            }
+
+            $historialPrevio = '';
+            if ($inventario && $inventario->intervenido) {
+                $historialPrevio = "Intervención previa en " . ($inventario->modulo_intervencion ?: 'otro módulo') . " el " . \Carbon\Carbon::parse($inventario->fecha_intervencion)->format('d/m/Y') . " por " . $inventario->analista_intervencion;
             }
 
             return response()->json([
                 'encontrado' => true,
-                'equipo'     => [
-                    'id'                    => $equipo->id,
-                    'placa_id'              => $equipo->placa_id,
-                    'serial'                => $equipo->serial,
-                    'num_traslado'          => $numTraslado,
-                    'tipo_equipo'           => $equipo->tipo_equipo,
-                    'marca'                 => $equipo->marca,
-                    'modelo'                => $equipo->modelo,
-                    'ubicacion'             => $equipo->ubicacion,
-                    'estado'                => $equipo->estado,
-                    'intervenido'           => (bool) $equipo->intervenido,
-                    'fecha_intervencion'    => $equipo->fecha_intervencion,
-                    'modulo_intervencion'   => $equipo->modulo_intervencion,
-                    'analista_intervencion' => $equipo->analista_intervencion,
-                    'origen_datos'          => 'inventario_general',
-                ],
+                'equipo' => array_merge($datosBase, [
+                    'alerta'           => 'verde',
+                    'mensaje'          => "Equipo apto para soplado.",
+                    'historial_previo' => $historialPrevio,
+                    'intervenido'      => false,
+                ])
             ]);
         }
 
-        // Si no está en inventario masivo, buscar si ya fue registrado previamente en el sistema
-        $historialEq = Equipo::where('placa_id', $query)->orderBy('id', 'desc')->first();
-        if ($historialEq) {
-            return response()->json([
-                'encontrado' => true,
-                'equipo'     => [
-                    'id'                    => 0,
-                    'placa_id'              => $historialEq->placa_id,
-                    'serial'                => $historialEq->placa_id ?? '',
-                    'num_traslado'          => $historialEq->num_traslado,
-                    'tipo_equipo'           => 'CPU / Escritorio',
-                    'marca'                 => '',
-                    'modelo'                => '',
-                    'ubicacion'             => $historialEq->ubicacion_destino ?? '',
-                    'estado'                => $historialEq->estado_actual ?? '',
-                    'intervenido'           => true,
-                    'fecha_intervencion'    => $historialEq->fecha_creacion,
-                    'modulo_intervencion'   => 'Diagnóstico CPU',
-                    'analista_intervencion' => $historialEq->nombre_analista,
-                    'origen_datos'          => 'historial_sistema',
-                ]
-            ]);
-        }
+        // 2. Lógica para el módulo de Diagnóstico CPU (por defecto)
+        if ($modulo === 'diagnostico') {
+            $diagnosticoPrevio = Equipo::where('placa_id', $termino)->latest('id')->first();
 
-        $historialSo = SopladoRegistro::where('placa_id', $query)->orderBy('id', 'desc')->first();
-        if ($historialSo) {
-            return response()->json([
-                'encontrado' => true,
-                'equipo'     => [
-                    'id'                    => 0,
-                    'placa_id'              => $historialSo->placa_id,
-                    'serial'                => '',
-                    'num_traslado'          => $historialSo->num_traslado,
-                    'tipo_equipo'           => 'Equipo',
-                    'marca'                 => '',
-                    'modelo'                => '',
-                    'ubicacion'             => '',
-                    'estado'                => '',
-                    'intervenido'           => true,
-                    'fecha_intervencion'    => $historialSo->created_at,
-                    'modulo_intervencion'   => 'Soplado',
-                    'analista_intervencion' => $historialSo->nombre_analista,
-                    'origen_datos'          => 'historial_sistema',
-                ]
-            ]);
-        }
+            if ($diagnosticoPrevio) {
+                $fecha = \Carbon\Carbon::parse($diagnosticoPrevio->fecha_creacion ?? $diagnosticoPrevio->created_at)->format('d/m/Y H:i');
+                $falla = $diagnosticoPrevio->falla_reportada ?? 'N/A';
+                
+                return response()->json([
+                    'encontrado' => true,
+                    'equipo' => array_merge($datosBase, [
+                        'placa_id'              => $diagnosticoPrevio->placa_id ?: $datosBase['placa_id'],
+                        'serial'                => $datosBase['serial'], // Diagnóstico no tiene serial
+                        'num_traslado'          => $diagnosticoPrevio->num_traslado ?: $datosBase['num_traslado'],
+                        'alerta'                => 'amarillo',
+                        'mensaje'               => "Atención: Este equipo ya cuenta con diagnóstico previo realizado por " . $diagnosticoPrevio->nombre_analista . " el " . $fecha . ". Motivo / Falla previa: " . $falla,
+                        'intervenido'           => true,
+                        'fecha_intervencion'    => $diagnosticoPrevio->fecha_creacion ?? $diagnosticoPrevio->created_at,
+                        'modulo_intervencion'   => 'Diagnóstico CPU',
+                        'analista_intervencion' => $diagnosticoPrevio->nombre_analista,
+                    ])
+                ]);
+            }
 
-        $historialPo = GarantiaPortatil::where('placa_id_equipo', $query)->orderBy('id', 'desc')->first();
-        if ($historialPo) {
-            return response()->json([
-                'encontrado' => true,
-                'equipo'     => [
-                    'id'                    => 0,
-                    'placa_id'              => $historialPo->placa_id_equipo,
-                    'serial'                => $historialPo->serial_disco ?? '',
-                    'num_traslado'          => $historialPo->numero_traslado,
-                    'tipo_equipo'           => 'Portátil',
-                    'marca'                 => '',
-                    'modelo'                => '',
-                    'ubicacion'             => '',
-                    'estado'                => $historialPo->estado_actual_equipo,
-                    'intervenido'           => true,
-                    'fecha_intervencion'    => $historialPo->created_at,
-                    'modulo_intervencion'   => 'Portátiles',
-                    'analista_intervencion' => $historialPo->nombre_analista,
-                    'origen_datos'          => 'historial_sistema',
-                ]
-            ]);
+            // Si NO existe en 'equipos', verificar si existe en inventario o soplado como información adicional
+            $sopladoPrevio = SopladoRegistro::where('placa_id', $termino)->latest('id')->first();
+
+            if ($inventario || $sopladoPrevio) {
+                $historialPrevio = '';
+                if ($sopladoPrevio) {
+                    $historialPrevio = "Pasó por Soplado el " . \Carbon\Carbon::parse($sopladoPrevio->created_at)->format('d/m/Y') . " por " . $sopladoPrevio->nombre_analista;
+                } elseif ($inventario && $inventario->intervenido) {
+                    $historialPrevio = "Intervención previa en " . ($inventario->modulo_intervencion ?: 'otro módulo') . " el " . \Carbon\Carbon::parse($inventario->fecha_intervencion)->format('d/m/Y') . " por " . $inventario->analista_intervencion;
+                }
+
+                return response()->json([
+                    'encontrado' => true,
+                    'equipo' => array_merge($datosBase, [
+                        'placa_id'         => $datosBase['placa_id'] ?: ($sopladoPrevio->placa_id ?? ''),
+                        'serial'           => $datosBase['serial'], // Soplado tampoco tiene serial
+                        'num_traslado'     => $datosBase['num_traslado'] ?: ($sopladoPrevio->num_traslado ?? ''),
+                        'alerta'           => 'verde',
+                        'mensaje'          => "Equipo apto para diagnóstico inicial.",
+                        'historial_previo' => $historialPrevio,
+                        'intervenido'      => false, // False para que NO bloquee como alerta amarilla
+                    ])
+                ]);
+            }
         }
 
         return response()->json([

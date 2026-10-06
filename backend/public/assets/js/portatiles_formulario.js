@@ -240,7 +240,7 @@ function enviarFormulario() {
             mostrarModal(
                 '<i class="fa-solid fa-circle-xmark text-danger"></i>', 
                 'Error al guardar', 
-                escapeHtml(data.message || 'Ocurrió un error al guardar.'),
+                escapeHtml(data.error || data.message || 'Ocurrió un error al guardar.'),
                 true
             );
         }

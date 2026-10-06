@@ -15,6 +15,15 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    /**
+     * Meta de intervenciones por día para cada línea técnica (capacidad de referencia).
+     * Se puede sobreescribir con DASHBOARD_META_DIARIA_LINEA en el .env.
+     */
+    private const META_DIARIA_LINEA = 10;
+
+    /** Días hábiles equivalentes por período para escalar la capacidad. */
+    private const DIAS_POR_PERIODO = ['dia' => 1, 'semana' => 5, 'mes' => 22, 'anio' => 260];
+
     public function index(Request $request)
     {
         $data = $this->resolverDatosDashboard($request);
@@ -23,11 +32,7 @@ class DashboardController extends Controller
             return response()->json($this->formatearRespuestaJson($data));
         }
 
-        $user = Auth::user();
-        if ($user && $user->rol === 'analista') {
-            return view('dashboard.analista', $data);
-        }
-
+        // Analistas y administradores comparten la vista; el RBAC filtra los datos en resolverDatosDashboard()
         return view('dashboard.index', $data);
     }
 
@@ -66,6 +71,11 @@ class DashboardController extends Controller
             'total_paginas'        => $data['total_paginas'],
             'pagina_actual'        => $data['pagina_actual'],
             'limite'               => $data['limite'],
+            'totalAnalistas'       => $data['totalAnalistas'],
+            'analistasActivosHoy'  => $data['analistasActivosHoy'],
+            'deltaSemanal'         => $data['deltaSemanal'],
+            'totalBaja'            => $data['totalBaja'],
+            'lineas'               => $data['lineas'],
         ];
     }
 
@@ -176,8 +186,14 @@ class DashboardController extends Controller
             ->paginate($limite, ['*'], 'page', $page)
             ->withQueryString();
 
+        // Filas del cronograma con hora/estado/URL ya resueltos (conserva las claves originales del modelo)
+        $maquinasIntervenidas->setCollection(
+            $maquinasIntervenidas->getCollection()->map(fn ($m) => $this->mapearIntervencion($m, $user))
+        );
+
         // 5. Tarjetas de Inventario General y Estadísticas
-        $cargadosQuery = InventarioGeneral::query();
+        $cargadosQuery = InventarioGeneral::query();        // Ingresadas en el período (KPI 1)
+        $cargadosGlobalQuery = InventarioGeneral::query();  // Inventario acumulado (base de efectividad)
         $intervenidosQuery = InventarioGeneral::where('intervenido', 1);
 
         if ($inicio && $fin) {
@@ -185,25 +201,54 @@ class DashboardController extends Controller
                 $inicio->toDateTimeString(),
                 $fin->toDateTimeString()
             ]);
+            $cargadosQuery->whereBetween('created_at', [
+                $inicio->toDateTimeString(),
+                $fin->toDateTimeString()
+            ]);
         }
 
         $analistaFiltroInventario = $esRestringido ? $nombreUsuario : $filtroAnalistaNombre;
+        $filtroCargados = function ($q) use ($analistaFiltroInventario, $colAnalistaMatriz) {
+            $q->where($colAnalistaMatriz, $analistaFiltroInventario)
+              ->orWhere('usuario_cargue', $analistaFiltroInventario);
+        };
         if ($analistaFiltroInventario) {
-            $cargadosQuery->where(function($q) use ($analistaFiltroInventario, $colAnalistaMatriz) {
-                $q->where($colAnalistaMatriz, $analistaFiltroInventario)
-                  ->orWhere('usuario_cargue', $analistaFiltroInventario);
-            });
+            $cargadosQuery->where($filtroCargados);
+            $cargadosGlobalQuery->where($filtroCargados);
             $intervenidosQuery->where($colAnalistaMatriz, $analistaFiltroInventario);
         }
 
         $totalCargados = $cargadosQuery->count();
+        $totalCargadosGlobal = $cargadosGlobalQuery->count();
         $totalIntervenidos = $intervenidosQuery->count();
 
+        // Pendientes de diagnóstico (no intervenidos) o con estado 'Baja' — sin duplicar equipos
+        $tieneEstado = Schema::hasColumn('inventario_general', 'estado');
+        $qPendBaja = InventarioGeneral::query()->where(function ($q) use ($tieneEstado) {
+            $q->where(function ($p) {
+                $p->where('intervenido', 0)->orWhereNull('intervenido');
+            });
+            if ($tieneEstado) {
+                $q->orWhereRaw('LOWER(estado) LIKE ?', ['%baja%']);
+            }
+        });
+        if ($analistaFiltroInventario) {
+            $qPendBaja->where(function ($q) use ($analistaFiltroInventario, $colAnalistaMatriz) {
+                $q->where($colAnalistaMatriz, $analistaFiltroInventario)
+                  ->orWhere('usuario_cargue', $analistaFiltroInventario);
+            });
+        }
+        $totalPendientesBaja = $qPendBaja->count();
+
         $statsInventario = [
-            'total_cargados'     => $totalCargados,
-            'total_intervenidos' => $totalIntervenidos,
-            'pendientes'         => max(0, $totalCargados - $totalIntervenidos),
-            'porcentaje'         => $totalCargados > 0 ? round(($totalIntervenidos / $totalCargados) * 100, 1) : 0
+            'total_cargados'        => $totalCargados,
+            'total_cargados_global' => $totalCargadosGlobal,
+            'total_intervenidos'    => $totalIntervenidos,
+            'pendientes'            => $totalPendientesBaja,
+            // Efectividad = intervenidas del período / total cargadas * 100
+            'porcentaje'            => $totalCargadosGlobal > 0
+                ? min(100, round(($totalIntervenidos / $totalCargadosGlobal) * 100, 1))
+                : 0,
         ];
 
         // Conteo de Traslados
@@ -215,6 +260,89 @@ class DashboardController extends Controller
         $totalTraslados = $trasladosQuery->distinct('num_traslado')->count('num_traslado');
 
         $totalAnalistas = Usuario::where('rol', 'analista')->where('activo', true)->count();
+
+        // Analistas con actividad hoy (turno actual): inventario + CPUs + soplado + portátiles
+        $hoyBogota = Carbon::now('America/Bogota');
+        $hoyIni = $hoyBogota->copy()->startOfDay()->toDateTimeString();
+        $hoyFin = $hoyBogota->copy()->endOfDay()->toDateTimeString();
+
+        $nombresActivos = collect();
+        $recolectar = function ($query, string $colNombre) use (&$nombresActivos, $esRestringido, $nombreUsuario) {
+            $query->whereNotNull($colNombre)->where($colNombre, '!=', '');
+            if ($esRestringido) {
+                $query->where($colNombre, $nombreUsuario);
+            }
+            $nombresActivos = $nombresActivos->merge($query->distinct()->pluck($colNombre));
+        };
+
+        $recolectar(
+            InventarioGeneral::where('intervenido', 1)
+                ->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [$hoyIni, $hoyFin]),
+            $colAnalistaMatriz
+        );
+        $recolectar(Equipo::whereBetween($colFechaCPUs, [$hoyIni, $hoyFin]), $colAnalistaCPUs);
+        $recolectar(SopladoRegistro::whereBetween($colFechaSoplado, [$hoyIni, $hoyFin]), $colAnalistaSoplado);
+        $recolectar(GarantiaPortatil::whereBetween($colFechaPortatiles, [$hoyIni, $hoyFin]), $colAnalistaPortatiles);
+
+        $analistasActivosHoy = $nombresActivos
+            ->map(fn ($n) => mb_strtolower(trim((string) $n)))
+            ->filter()
+            ->unique()
+            ->count();
+
+        // Variación de intervenciones: semana actual vs semana anterior
+        $contarSemana = function (Carbon $desde, Carbon $hasta) use ($colAnalistaMatriz, $analistaFiltroInventario) {
+            $q = InventarioGeneral::where('intervenido', 1)
+                ->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [
+                    $desde->toDateTimeString(),
+                    $hasta->toDateTimeString(),
+                ]);
+            if ($analistaFiltroInventario) {
+                $q->where($colAnalistaMatriz, $analistaFiltroInventario);
+            }
+            return $q->count();
+        };
+        $semanaActual = $contarSemana($hoyBogota->copy()->startOfWeek(), $hoyBogota->copy()->endOfWeek());
+        $semanaPrevia = $contarSemana(
+            $hoyBogota->copy()->subWeek()->startOfWeek(),
+            $hoyBogota->copy()->subWeek()->endOfWeek()
+        );
+        if ($semanaPrevia > 0) {
+            $deltaSemanal = round((($semanaActual - $semanaPrevia) / $semanaPrevia) * 100, 1);
+        } else {
+            $deltaSemanal = $semanaActual > 0 ? 100.0 : 0.0;
+        }
+
+        // Equipos dados de baja (si la columna existe)
+        $totalBaja = 0;
+        if (Schema::hasColumn('inventario_general', 'estado')) {
+            $qBaja = InventarioGeneral::whereRaw('LOWER(estado) LIKE ?', ['%baja%']);
+            if ($analistaFiltroInventario) {
+                $qBaja->where($colAnalistaMatriz, $analistaFiltroInventario);
+            }
+            $totalBaja = $qBaja->count();
+        }
+
+        // Capacidad por línea técnica (meta diaria x días hábiles del período)
+        $metaDiaria = (int) env('DASHBOARD_META_DIARIA_LINEA', self::META_DIARIA_LINEA);
+        $diasPeriodo = self::DIAS_POR_PERIODO[$periodo] ?? null;
+        $construirLinea = function (string $clave, string $nombre, string $icono, int $total) use ($metaDiaria, $diasPeriodo) {
+            $capacidad = $diasPeriodo ? $metaDiaria * $diasPeriodo : max($total, 1);
+            return [
+                'clave'     => $clave,
+                'nombre'    => $nombre,
+                'icono'     => $icono,
+                'total'     => $total,
+                'capacidad' => $capacidad,
+                'pct'       => (int) min(100, round(($total / max($capacidad, 1)) * 100)),
+            ];
+        };
+        $lineas = [
+            $construirLinea('cpu', 'Diagnóstico CPU', 'fa-desktop', $totalCPUs),
+            $construirLinea('soplado', 'Mantenimiento Soplado', 'fa-wind', $totalSoplado),
+            $construirLinea('portatiles', 'Portátiles', 'fa-laptop', $totalPortatiles),
+        ];
+
         $porcEq = $totalIntervenciones > 0 ? round(($totalEquipos / $totalIntervenciones) * 100, 1) : 0;
         $porcSp = $totalIntervenciones > 0 ? round(($totalSoplado / $totalIntervenciones) * 100, 1) : 0;
         $porcPt = $totalIntervenciones > 0 ? round(($totalPortatiles / $totalIntervenciones) * 100, 1) : 0;
@@ -243,7 +371,53 @@ class DashboardController extends Controller
             'total_paginas'        => $maquinasIntervenidas->lastPage(),
             'pagina_actual'        => $maquinasIntervenidas->currentPage(),
             'limite'               => $maquinasIntervenidas->perPage(),
+            'analistasActivosHoy'  => $analistasActivosHoy,
+            'deltaSemanal'         => $deltaSemanal,
+            'totalBaja'            => $totalBaja,
+            'lineas'               => $lineas,
         ];
+    }
+
+    /**
+     * Normaliza un registro de inventario intervenido para el cronograma del dashboard.
+     * Conserva los atributos originales y agrega hora, módulo, estado y URL de detalle.
+     */
+    private function mapearIntervencion(InventarioGeneral $m, $user = null): array
+    {
+        $fecha = $m->fecha_intervencion ?? $m->created_at;
+        $mod = strtolower((string) $m->modulo_intervencion);
+
+        if (str_contains($mod, 'portat') || str_contains($mod, 'laptop')) {
+            $modulo = 'portatiles'; $moduloLabel = 'Portátil'; $ruta = 'portatiles.index'; $permiso = 'portatiles.ver_bitacora';
+        } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
+            $modulo = 'soplado'; $moduloLabel = 'Soplado'; $ruta = 'soplado.index'; $permiso = 'soplado.ver_bitacora';
+        } else {
+            $modulo = 'cpu'; $moduloLabel = 'Diagnóstico CPU'; $ruta = 'equipos.index'; $permiso = 'cpus.ver_bitacora';
+        }
+
+        $estadoRaw = strtolower((string) $m->estado);
+        if (str_contains($estadoRaw, 'baja')) {
+            [$estadoLabel, $estadoTono] = ['Baja', 'amber'];
+        } elseif (str_contains($estadoRaw, 'pend')) {
+            [$estadoLabel, $estadoTono] = ['Pendiente', 'amber'];
+        } else {
+            [$estadoLabel, $estadoTono] = ['Completado', 'teal'];
+        }
+
+        $url = ($user && $user->can($permiso)) ? route($ruta) : null;
+
+        return array_merge($m->attributesToArray(), [
+            'placa'              => $m->identificador_1 ?: ($m->placa_id ?: '—'),
+            'serial'             => $m->identificador_2 ?: ($m->serial ?: '—'),
+            'fecha_intervencion' => $fecha ? $fecha->format('Y-m-d H:i:s') : null,
+            'hora'               => $fecha ? Carbon::parse($fecha)->format('H:i') : '--:--',
+            'fecha_corta'        => $fecha ? $fecha->format('d/m/Y') : null,
+            'modulo'             => $modulo,
+            'modulo_label'       => $moduloLabel,
+            'estado_label'       => $estadoLabel,
+            'estado_tono'        => $estadoTono,
+            'detalle_url'        => $url,
+        ]);
     }
 
     /**

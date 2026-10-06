@@ -205,5 +205,5 @@
         guardarSoplado: '{{ route("soplado.store") }}'
     };
 </script>
-<script src="{{ asset('assets/js/soplado_formulario.js') }}"></script>
+<script src="{{ asset('assets/js/soplado_formulario.js') }}?v={{ time() }}"></script>
 @endsection

@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (spinnerPlaca) spinnerPlaca.classList.remove('d-none');
 
             debounceTimer = setTimeout(() => {
-                fetch(window.AppUrls.buscarEquipo + '?query=' + encodeURIComponent(val))
+                fetch(window.AppUrls.buscarEquipo + '?query=' + encodeURIComponent(val) + '&modulo=soplado')
                     .then(r => r.json())
                     .then(res => {
                         if (spinnerPlaca) spinnerPlaca.classList.add('d-none');
@@ -291,11 +291,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 `;
                             } else {
+                                const historialMsg = eq.historial_previo ? `<div class="text-info mt-1 small fw-semibold"><i class="fa-solid fa-clock-rotate-left me-1"></i>${escapeHtml(eq.historial_previo)}</div>` : '';
                                 feedbackDiv.innerHTML = `
                                     <div class="alert alert-success py-2 px-3 mb-0 small border-success shadow-sm">
                                         <div class="d-flex align-items-center mb-1">
                                             <i class="fa-solid fa-circle-check text-success me-2 fs-5"></i>
-                                            <strong>Equipo sincronizado con Inventario General</strong>
+                                            <strong>${eq.mensaje ? escapeHtml(eq.mensaje) : 'Equipo sincronizado con Inventario General'}</strong>
                                         </div>
                                         <div class="text-dark">
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">${escapeHtml(eq.tipo_equipo || 'Equipo')}</span>
@@ -307,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <strong>Ubicación:</strong> ${escapeHtml(eq.ubicacion || 'Sede')}
                                         </div>
                                         ${trasladoBadge}
+                                        ${historialMsg}
                                         <div class="text-success fw-semibold mt-1">
                                             <i class="fa-solid fa-arrow-down-long me-1"></i> Se marcará como intervenido y se descontará del inventario pendiente al guardar.
                                         </div>

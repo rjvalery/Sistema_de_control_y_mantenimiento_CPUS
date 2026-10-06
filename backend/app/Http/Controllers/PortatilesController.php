@@ -221,6 +221,7 @@ class PortatilesController extends Controller
             return redirect()->route('portatiles.create')->with('msg', 'Guardado correctamente');
 
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en PortatilesController@store: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['error' => 'Error: ' . $e->getMessage()], 500);
             }
