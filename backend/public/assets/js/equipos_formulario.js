@@ -45,15 +45,20 @@ function evaluarGestion() {
     const uploadLabel   = document.getElementById('upload-label');
 
     if (valor === 'Intervencion') {
-        document.getElementById('seccion_intervencion')?.classList.remove('d-none');
+        const seccion_intervencion = document.getElementById('seccion_intervencion');
+        if(seccion_intervencion) seccion_intervencion.classList.remove('d-none');
     } else if (valor === 'Novedad') {
-        document.getElementById('seccion_novedad')?.classList.remove('d-none');
+        const seccion_novedad = document.getElementById('seccion_novedad');
+        if(seccion_novedad) seccion_novedad.classList.remove('d-none');
     } else if (valor === 'Baja') {
-        document.getElementById('seccion_baja')?.classList.remove('d-none');
+        const seccion_baja = document.getElementById('seccion_baja');
+        if(seccion_baja) seccion_baja.classList.remove('d-none');
     } else if (valor === 'IT') {
-        document.getElementById('seccion_it')?.classList.remove('d-none');
+        const seccion_it = document.getElementById('seccion_it');
+        if(seccion_it) seccion_it.classList.remove('d-none');
     } else if (valor === 'Diagnostico') {
-        document.getElementById('seccion_diagnostico_campos')?.classList.remove('d-none');
+        const seccion_diagnostico_campos = document.getElementById('seccion_diagnostico_campos');
+        if(seccion_diagnostico_campos) seccion_diagnostico_campos.classList.remove('d-none');
     }
 
     if (valor === 'Baja') {
@@ -151,14 +156,16 @@ function limpiarPrevisualizacion() {
     if (con) con.classList.add('d-none');
     if (lbl) lbl.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
     
-    if (document.getElementById('tipo_gestion')?.value !== 'Baja' && pri) {
+    const tipoGestionEl = document.getElementById('tipo_gestion');
+    if (tipoGestionEl && tipoGestionEl.value !== 'Baja' && pri) {
         pri.required = true;
     }
 }
 
 async function enviarFormulario() {
     const form = document.getElementById('formGarantias');
-    const tipoGestion = document.getElementById('tipo_gestion')?.value;
+    const tipoGestionEl2 = document.getElementById('tipo_gestion');
+    const tipoGestion = tipoGestionEl2 ? tipoGestionEl2.value : '';
     const principal = document.getElementById('foto_equipo');
 
     if (tipoGestion === 'Baja') {
@@ -183,9 +190,12 @@ async function enviarFormulario() {
     }
 
     const formData = new FormData(form);
-    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const tokenInput = document.querySelector('input[name="_token"]');
+    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
 
-    const placaVal = document.getElementById('placa_id')?.value?.trim() || '';
+    const placaInputEl = document.getElementById('placa_id');
+    const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
     formData.set('placa_id', placaVal);
 

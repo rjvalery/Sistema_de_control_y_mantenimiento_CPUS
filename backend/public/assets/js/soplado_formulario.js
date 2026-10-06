@@ -142,10 +142,13 @@ async function enviarFormulario() {
     }
 
     const formData = new FormData(form);
-    const placaVal = document.getElementById('placa_id')?.value?.trim() || '';
+    const placaInputEl = document.getElementById('placa_id');
+    const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
     formData.set('placa_id', placaVal);
-    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const tokenInput = document.querySelector('input[name="_token"]');
+    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'foto_evidencia.jpg');

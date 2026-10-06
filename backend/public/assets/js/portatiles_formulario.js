@@ -197,9 +197,12 @@ function enviarFormulario() {
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando diagnóstico...';
 
     const formData = new FormData(form);
-    const placaVal = document.getElementById('placa_id_equipo')?.value?.trim() || '';
+    const placaInputEl = document.getElementById('placa_id_equipo');
+    const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
-    const csrfToken = document.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const tokenInput = document.querySelector('input[name="_token"]');
+    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
 
     fetch(window.AppUrls.guardarPortatiles, {
         method: 'POST',
@@ -219,7 +222,8 @@ function enviarFormulario() {
     })
     .then(data => {
         if (data.status === 'success' || data.message === 'Guardado correctamente') {
-            const placa = data.placa_id || form.querySelector('#placa_id_equipo')?.value || '';
+            const pInput = form.querySelector('#placa_id_equipo');
+            const placa = data.placa_id || (pInput ? pInput.value : '') || '';
             const btnEvidencia = document.getElementById('btnIrEvidencia');
             if (btnEvidencia && placa) {
                 btnEvidencia.href = window.AppUrls.evidenciaPortatiles + '?placa=' + encodeURIComponent(placa);

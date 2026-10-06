@@ -80,6 +80,9 @@
                         <a class="nav-link" href="{{ route('inventario.index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Inventario</a>
                     </li>
                     @endcan
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('trazabilidad.index') }}"><i class="fa-solid fa-clock-rotate-left me-1"></i> Trazabilidad</a>
+                    </li>
                     @can('usuarios.ver')
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('usuarios.index') }}"><i class="fa-solid fa-users-gear me-1"></i> Usuarios</a>

@@ -74,4 +74,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::post('/usuarios/cambiar-password', [UsuariosController::class, 'cambiarPasswordPropia'])->name('usuarios.cambiar_password');
+
+    // Módulo de Trazabilidad (Hoja de Vida)
+    Route::get('/trazabilidad', [\App\Http\Controllers\TrazabilidadController::class, 'index'])->name('trazabilidad.index');
+    Route::get('/trazabilidad/buscar', [\App\Http\Controllers\TrazabilidadController::class, 'buscar'])->name('trazabilidad.buscar');
 });
