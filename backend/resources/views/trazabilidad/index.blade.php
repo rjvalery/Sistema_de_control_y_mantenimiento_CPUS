@@ -272,16 +272,23 @@
 
                     const li = document.createElement('li');
                     li.className = 'timeline-item';
+                    
+                    const esBaja = item.is_baja === true;
+                    const contentClass = esBaja ? 'border border-danger border-2 shadow-lg' : '';
+                    const titleClass = esBaja ? 'text-danger fw-bold' : '';
+                    const badgeBaja = esBaja ? '<span class="badge bg-danger ms-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> Baja Autorizada</span>' : '';
+                    const trasladoBadge = item.traslado ? `<span class="badge bg-light text-dark border ms-1"><i class="fa-solid fa-truck-fast me-1 text-muted"></i> ${item.traslado}</span>` : '';
+
                     li.innerHTML = `
                         <div class="timeline-icon bg-${item.color}">
                             <i class="fa-solid ${item.icono}"></i>
                         </div>
-                        <div class="timeline-content">
+                        <div class="timeline-content ${contentClass}" style="${esBaja ? 'background-color: #fff5f5;' : ''}">
                             <span class="timeline-date"><i class="fa-regular fa-calendar me-1"></i> ${item.fecha}</span>
-                            <h5 class="timeline-title">${item.modulo}</h5>
+                            <h5 class="timeline-title ${titleClass}">${item.modulo} ${badgeBaja}</h5>
                             <div class="mb-3">
-                                <span class="badge bg-light text-dark border"><i class="fa-solid fa-user me-1 text-muted"></i> ${item.analista}</span>
-                                <span class="badge bg-light text-dark border ms-1"><i class="fa-solid fa-truck-fast me-1 text-muted"></i> ${item.traslado || 'Sin traslado'}</span>
+                                <span class="badge ${esBaja ? 'bg-danger text-white' : 'bg-light text-dark border'}"><i class="fa-solid fa-user me-1 ${esBaja ? 'text-white' : 'text-muted'}"></i> ${item.analista}</span>
+                                ${trasladoBadge}
                             </div>
                             <div class="timeline-body">
                                 ${detallesHtml}

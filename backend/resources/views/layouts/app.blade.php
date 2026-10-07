@@ -76,6 +76,26 @@
                         </ul>
                     </li>
                     @endcanany
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-desktop me-1"></i> Monitores
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('monitores.create') }}"><i class="fa-solid fa-plus me-2 text-primary"></i>Nuevo Registro</a></li>
+                            <li><a class="dropdown-item" href="{{ route('monitores.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-headset me-1"></i> Diademas
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('diademas.create') }}"><i class="fa-solid fa-plus me-2 text-primary"></i>Recepción por Lote</a></li>
+                            <li><a class="dropdown-item" href="{{ route('diademas.index') }}"><i class="fa-solid fa-list me-2 text-secondary"></i>Bitácora</a></li>
+                        </ul>
+                    </li>
                     @can('inventario.ver')
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('inventario.index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Inventario</a>

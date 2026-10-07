@@ -4,7 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use App\Observers\InventarioGeneralObserver;
 
+#[ObservedBy([InventarioGeneralObserver::class])]
 class InventarioGeneral extends Model
 {
     use HasFactory;
@@ -161,5 +164,13 @@ class InventarioGeneral extends Model
         });
 
         return $candidatosTraslado[0]['num'];
+    }
+
+    /**
+     * Relación con el historial de auditorías
+     */
+    public function audits()
+    {
+        return $this->morphMany(\App\Models\HistorialAuditoria::class, 'auditable');
     }
 }

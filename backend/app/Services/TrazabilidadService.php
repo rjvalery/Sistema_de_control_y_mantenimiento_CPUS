@@ -251,7 +251,7 @@ class TrazabilidadService
         $timeline = [];
 
         // 1. Ingresos y Cargues (InventarioGeneral)
-        $cargues = InventarioGeneral::whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos)->get();
+        $cargues = InventarioGeneral::with(['audits.user'])->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos)->get();
         foreach ($cargues as $c) {
             $timeline[] = [
                 'tipo' => 'ingreso',
@@ -268,6 +268,43 @@ class TrazabilidadService
                 'icono' => 'fa-box-open',
                 'color' => 'primary'
             ];
+
+            // 1.5. Mapear Auditorías como Eventos Administrativos
+            if ($c->audits) {
+                foreach ($c->audits as $audit) {
+                    $cambios = [];
+                    $isBaja = false;
+                    
+                    if (!empty($audit->new_values) && is_array($audit->new_values)) {
+                        foreach ($audit->new_values as $key => $newVal) {
+                            $oldVal = isset($audit->old_values[$key]) ? $audit->old_values[$key] : 'N/A';
+                            $cambios[] = ucfirst($key) . " cambió de '$oldVal' a '$newVal'";
+                            
+                            if ($key === 'estado' && in_array(strtoupper(trim((string)$newVal)), ['1', 'BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP'])) {
+                                $isBaja = true;
+                            }
+                        }
+                    }
+
+                    $nombreUsuario = $audit->user ? ($audit->user->name ?? $audit->user->nombre) : 'Desconocido';
+
+                    $timeline[] = [
+                        'tipo' => 'actualizacion_estado',
+                        'modulo' => 'Modificación Administrativa',
+                        'fecha' => Carbon::parse($audit->created_at)->setTimezone('America/Bogota')->format('Y-m-d H:i:s'),
+                        'fecha_obj' => Carbon::parse($audit->created_at)->setTimezone('America/Bogota'),
+                        'analista' => $nombreUsuario,
+                        'traslado' => null,
+                        'detalles' => [
+                            'Acción' => "Modificación de datos por " . $nombreUsuario,
+                            'Cambios' => empty($cambios) ? 'No se detectaron cambios.' : implode(' | ', $cambios)
+                        ],
+                        'icono' => 'fa-user-pen',
+                        'color' => $isBaja ? 'danger' : 'secondary',
+                        'is_baja' => $isBaja
+                    ];
+                }
+            }
         }
 
         // 2. Mantenimientos de Soplado

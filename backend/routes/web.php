@@ -86,4 +86,19 @@ Route::middleware('auth')->group(function () {
         Route::get('/trazabilidad', [\App\Http\Controllers\TrazabilidadController::class, 'index'])->name('trazabilidad.index');
         Route::get('/trazabilidad/buscar', [\App\Http\Controllers\TrazabilidadController::class, 'buscar'])->name('trazabilidad.buscar');
     });
+
+    // Módulo de Reacondicionamiento de Monitores
+    Route::prefix('monitores')->name('monitores.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\MonitoresController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\MonitoresController::class, 'create'])->name('create');
+        Route::post('/store', [\App\Http\Controllers\MonitoresController::class, 'store'])->name('store');
+        Route::get('/buscar/{serial}', [\App\Http\Controllers\MonitoresController::class, 'buscarEquipo'])->name('buscar');
+    });
+
+    // Módulo de Recepción de Diademas por Lote
+    Route::prefix('diademas')->name('diademas.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\DiademasController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\DiademasController::class, 'create'])->name('create');
+        Route::post('/store', [\App\Http\Controllers\DiademasController::class, 'store'])->name('store');
+    });
 });

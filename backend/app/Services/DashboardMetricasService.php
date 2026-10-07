@@ -144,7 +144,7 @@ class DashboardMetricasService
         $qPendBaja = InventarioGeneral::query()->where(function ($q) {
             $q->where(function ($p) {
                 $p->where('intervenido', 0)->orWhereNull('intervenido');
-            })->orWhereRaw('LOWER(estado) LIKE ?', ['%baja%']);
+            })->orWhereIn(DB::raw('UPPER(TRIM(estado))'), ['BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP', '1']);
         });
         if ($analistaFiltroInventario) {
             $qPendBaja->where(function ($q) use ($analistaFiltroInventario) {
@@ -159,10 +159,28 @@ class DashboardMetricasService
         }
         $totalTraslados = $trasladosQuery->distinct('num_traslado')->count('num_traslado');
 
-        $qBaja = InventarioGeneral::whereRaw('LOWER(estado) LIKE ?', ['%baja%']);
+        $qBaja = InventarioGeneral::query()
+            ->whereIn(DB::raw('UPPER(TRIM(estado))'), ['BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP', '1']);
+        
         if ($analistaFiltroInventario) {
             $qBaja->where('analista_intervencion', $analistaFiltroInventario);
         }
+
+        // Sincronizar fechas con el periodo activo
+        if ($inicio && $fin) {
+            $qBaja->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [
+                $inicio->toDateTimeString(), 
+                $fin->toDateTimeString()
+            ]);
+        }
+
+        // Agrupación estricta por equipo único (serial o placa)
+        $qBaja->whereIn('id', function ($query) {
+            $query->select(DB::raw('MAX(id)'))
+                  ->from('inventario_general')
+                  ->groupBy(DB::raw('COALESCE(serial, placa_id)'));
+        });
+
         $totalBaja = $qBaja->count();
 
         $hoyBogota = Carbon::now('America/Bogota');
@@ -170,25 +188,25 @@ class DashboardMetricasService
         $hoyFin = $hoyBogota->copy()->endOfDay()->toDateTimeString();
 
         $qEquipos = DB::table('equipos')
-            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->selectRaw('CAST(LOWER(TRIM(nombre_analista)) AS CHAR) as analista')
             ->whereBetween('fecha_creacion', [$hoyIni, $hoyFin])
             ->whereNotNull('nombre_analista')
             ->where('nombre_analista', '!=', '');
             
         $qSoplado = DB::table('soplado_registros')
-            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->selectRaw('CAST(LOWER(TRIM(nombre_analista)) AS CHAR) as analista')
             ->whereBetween('created_at', [$hoyIni, $hoyFin])
             ->whereNotNull('nombre_analista')
             ->where('nombre_analista', '!=', '');
 
         $qPortatiles = DB::table('garantias_portatiles')
-            ->selectRaw('LOWER(TRIM(nombre_analista)) as analista')
+            ->selectRaw('CAST(LOWER(TRIM(nombre_analista)) AS CHAR) as analista')
             ->whereBetween('created_at', [$hoyIni, $hoyFin])
             ->whereNotNull('nombre_analista')
             ->where('nombre_analista', '!=', '');
 
         $qInventario = DB::table('inventario_general')
-            ->selectRaw('LOWER(TRIM(analista_intervencion)) as analista')
+            ->selectRaw('CAST(LOWER(TRIM(analista_intervencion)) AS CHAR) as analista')
             ->where('intervenido', 1)
             ->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [$hoyIni, $hoyFin])
             ->whereNotNull('analista_intervencion')
@@ -254,6 +272,15 @@ class DashboardMetricasService
         if ($inicio && $fin) {
             $qMatriz->whereRaw('COALESCE(fecha_intervencion, created_at) BETWEEN ? AND ?', [$inicio->toDateTimeString(), $fin->toDateTimeString()]);
         }
+
+        // Agrupación estricta por equipo único para representar 1 fila por máquina física
+        $qMatriz->whereIn('id', function ($query) {
+            $query->select(DB::raw('MAX(id)'))
+                  ->from('inventario_general')
+                  ->where('intervenido', 1)
+                  ->groupBy(DB::raw('COALESCE(serial, placa_id)'));
+        });
+
         $limite = 10;
         $maquinasIntervenidas = $qMatriz->orderBy('id', 'desc')->paginate($limite, ['*'], 'page', $page)->withQueryString();
         $maquinasIntervenidas->setCollection($maquinasIntervenidas->getCollection()->map(fn ($m) => $this->mapearIntervencion($m, $user)));
@@ -280,10 +307,16 @@ class DashboardMetricasService
             $modulo = 'cpu'; $moduloLabel = 'Diagnóstico CPU'; $ruta = 'equipos.index'; $permiso = 'cpus.ver_bitacora';
         }
 
-        $estadoRaw = strtolower((string) $m->estado);
-        if (str_contains($estadoRaw, 'baja')) { [$estadoLabel, $estadoTono] = ['Baja', 'amber']; } 
-        elseif (str_contains($estadoRaw, 'pend')) { [$estadoLabel, $estadoTono] = ['Pendiente', 'amber']; } 
-        else { [$estadoLabel, $estadoTono] = ['Completado', 'teal']; }
+        $estadoRaw = strtoupper(trim((string) $m->estado));
+        if (in_array($estadoRaw, ['BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP', '1'])) { 
+            [$estadoLabel, $estadoTono] = ['Baja', 'amber']; 
+        } 
+        elseif (str_contains(strtolower($estadoRaw), 'pend')) { 
+            [$estadoLabel, $estadoTono] = ['Pendiente', 'amber']; 
+        } 
+        else { 
+            [$estadoLabel, $estadoTono] = ['Completado', 'teal']; 
+        }
 
         $url = ($user && $user->can($permiso)) ? route($ruta) : null;
 

@@ -96,6 +96,7 @@ class RbacService
                 [
                     'slug' => 'inventario.traslados',
                     'nombre' => 'Traslados',
+                    'descripcion' => 'Permite gestionar traslados en el inventario general'
                 ],
             ],
             'Cargue Masivo' => [

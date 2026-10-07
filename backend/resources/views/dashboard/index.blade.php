@@ -336,8 +336,14 @@
                 <div class="min-w-0">
                     <p class="mes-kpi-label">Equipos Pendientes / Baja</p>
                     <p class="mes-kpi-value" id="kpiPendientes">{{ number_format((int) $statsInventario['pendientes']) }}</p>
-                    <span class="mes-badge mes-badge-amber">
-                        <i class="fa-solid fa-circle-exclamation"></i>Requiere atención
+                    @php
+                        $hasBaja = $totalBaja > 0;
+                        $colorBadge = $hasBaja ? 'mes-badge-red' : 'mes-badge-amber';
+                        $iconoBadge = $hasBaja ? 'fa-triangle-exclamation' : 'fa-circle-exclamation';
+                        $textoBadge = $hasBaja ? 'Equipos en Baja' : 'Requiere atención';
+                    @endphp
+                    <span class="mes-badge {{ $colorBadge }}" id="badgeBajaContainer">
+                        <i class="fa-solid {{ $iconoBadge }}"></i><span id="badgeBajaText">{{ $textoBadge }}</span>
                         <span class="opacity-75">· <span id="kpiBaja">{{ (int) $totalBaja }}</span> en baja</span>
                     </span>
                 </div>

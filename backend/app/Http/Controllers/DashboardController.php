@@ -107,7 +107,7 @@ class DashboardController extends Controller
         $service = app(\App\Services\DashboardMetricasService::class);
         [$periodo, $inicio, $fin] = $service->resolverRangoFechas($periodo);
 
-        $query = InventarioGeneral::query()->where('intervenido', 1);
+        $query = InventarioGeneral::query()->with('garantiasPortatiles')->where('intervenido', 1);
 
         if ($filtroAnalistaNombre) {
             $query->where('analista_intervencion', $filtroAnalistaNombre);
@@ -122,7 +122,7 @@ class DashboardController extends Controller
 
         $query->orderBy('id', 'desc');
 
-        $encabezados = ['ID / RADICADO', 'PLACA', 'SERIAL', 'MÓDULO', 'MARCA', 'MODELO', 'FALLA / CONDICIÓN', 'ANALISTA', 'FECHA INTERVENCIÓN'];
+        $encabezados = ['ID / RADICADO', 'PLACA', 'SERIAL', 'MÓDULO', 'MARCA', 'MODELO', 'FALLA / CONDICIÓN', 'TRASLADO', 'ANALISTA', 'FECHA INTERVENCIÓN'];
         
         $nombreArchivo = 'Bitacora_Maquinas_Intervenidas_' . Carbon::now('America/Bogota')->format('Y-m-d') . '.csv';
 
@@ -137,6 +137,32 @@ class DashboardController extends Controller
                 $fechaStr = '';
             }
 
+            // Buscar traslado de manera robusta usando la función del modelo
+            $traslado = \App\Models\InventarioGeneral::buscarTrasladoEnSistema($row->identificador_1 ?: ($row->placa_id ?: ''), $row);
+
+            // Determinar la falla o condición real
+            $fallaCondicion = $row->observaciones ?? ($row->estado ?? 'N/A');
+            $estadoRaw = strtoupper(trim((string)$row->estado));
+            
+            // Traducir estado 1 o similares a BAJA
+            if (in_array($estadoRaw, ['1', 'BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP'])) {
+                $fallaCondicion = 'BAJA';
+            }
+
+            // Detectar si es un equipo de garantía
+            if (stripos((string)$row->modulo_intervencion, 'portat') !== false || stripos((string)$row->modulo_intervencion, 'garant') !== false) {
+                $garantia = $row->garantiasPortatiles->first();
+                if ($garantia) {
+                    $estAct = strtoupper(trim((string)$garantia->estado_actual_equipo));
+                    $gar = strtoupper(trim((string)$garantia->garantia));
+                    if (str_contains($estAct, 'GARANT') || str_contains($gar, 'APLICA') || str_contains($gar, 'GARANT')) {
+                        $fallaCondicion = 'GARANTÍA';
+                    }
+                }
+            } elseif (str_contains($estadoRaw, 'GARANT')) {
+                $fallaCondicion = 'GARANTÍA';
+            }
+
             return [
                 $row->id,
                 $row->identificador_1 ?: ($row->placa_id ?: 'N/A'),
@@ -144,7 +170,8 @@ class DashboardController extends Controller
                 $row->modulo_intervencion ?: 'N/A',
                 $row->marca ?: 'N/A',
                 $row->modelo ?: 'N/A',
-                $row->observaciones ?? ($row->estado ?? 'N/A'),
+                $fallaCondicion,
+                $traslado ?: ($row->num_traslado ?: 'N/A'),
                 $row->analista_intervencion ?: 'N/A',
                 $fechaStr
             ];
