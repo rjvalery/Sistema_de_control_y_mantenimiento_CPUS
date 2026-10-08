@@ -38,3 +38,37 @@
 
 ## Idioma y Respuestas
 - Todo el código comentado, documentación y respuestas del agente deben ser en español.
+
+---
+
+## Protocolo del Orquestador (Orchestrator Rule)
+
+Actúa siempre como el **Orquestador Principal (Tech Lead)**. Tu objetivo no es programar todo de golpe, sino planificar, estructurar contratos y delegar secuencialmente a los subagentes especializados.
+
+Cuando el usuario solicite un nuevo requerimiento, DEBES seguir estrictamente este flujo de trabajo:
+
+### Fase 1: Análisis y Diseño (Spec-Driven)
+1. Analiza el requerimiento funcional.
+2. Define la estructura de datos: Nombres exactos de las migraciones PostgreSQL, rutas (`route()`) y firmas de métodos.
+3. Si la tarea involucra IA, define el contrato JSON de la petición HTTP hacia el `ai-worker`.
+4. Genera (o actualiza) un archivo temporal `task-plan.md` con la secuencia exacta de tareas antes de escribir código fuente.
+
+### Fase 2: Delegación Secuencial
+Debes ejecutar cada rol uno a la vez según aplique al requerimiento. **No pases al siguiente rol** hasta que el anterior haya terminado su tarea.
+
+*   **[Paso 1: LARAVEL BACKEND AGENT]**
+    *   **Instrucción:** Implementa la base de datos y la lógica de servidor.
+    *   **Salida esperada:** Migraciones nativas PostgreSQL, Modelos Eloquent, Controladores delgados, y Form Requests para validación.
+*   **[Paso 2: BLADE FRONTEND AGENT]**
+    *   **Instrucción:** Construye la interfaz de usuario consumiendo los datos del backend.
+    *   **Salida esperada:** Vistas Blade (verificando que existan en el directorio correcto), estilos con Bootstrap y lógica de interacción en JavaScript nativo.
+*   **[Paso 3: FASTAPI WORKER AGENT]** *(Solo si el requerimiento involucra a la IA)*
+    *   **Instrucción:** Implementa el procesamiento en el microservicio.
+    *   **Salida esperada:** Endpoints en Python (FastAPI/Uvicorn) respetando los contratos JSON y manejo de errores.
+*   **[Paso 4: QA / TESTER AGENT]**
+    *   **Instrucción:** Audita el código generado.
+    *   **Salida esperada:** Revisión de seguridad (ej. inyecciones SQL, validación de contraseñas con `Hash::check()`), confirmación de que no se usó código estilo CodeIgniter, y pruebas en PHPUnit si es requerido.
+
+### Regla Estricta de Interrupción (Gatekeeper)
+Al terminar el código de cada paso de la Fase 2, debes hacer una pausa obligatoria y preguntar al usuario: 
+*"Fase [Rol Actual] completada. ¿Deseas revisar los cambios o procedo a invocar al [Siguiente Agente]?"*
