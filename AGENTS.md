@@ -5,7 +5,7 @@
 - Base de Datos: PostgreSQL (BD: `diagnostico_cpus`, esquema: `public`).
 - Modelado: Migraciones nativas y modelos Eloquent de Laravel.
 - Microservicio IA: Python (FastAPI / Uvicorn) en `services/ai-worker/`.
-- Frontend: Vistas Blade con Bootstrap y JavaScript nativo.
+- Frontend: React (Vite) con TanStack Router.
 
 ## Principios de Diseño y Buenas Prácticas
 1. **KISS y YAGNI**:
@@ -27,9 +27,9 @@
 3. **Autenticación**:
    - Utilizar la tabla personalizada `usuarios` y el modelo `app/Models/Usuario.php` (configurado en `config/auth.php`).
    - Validar contraseñas siempre mediante `Hash::check()` y generarlas con `Hash::make()`.
-4. **Vistas y Nombres de Rutas**:
-   - Antes de invocar `view(...)` en un controlador, verificar que la plantilla Blade exista en `backend/resources/views/` para evitar excepciones `View not found`.
-   - Utilizar siempre rutas nombradas: `route('nombre.ruta')`.
+4. **Rutas e Integración Frontend**:
+   - El frontend está desacoplado y consume las rutas de la API (`routes/api.php`) o web (`routes/web.php` con respuestas JSON).
+   - Utilizar siempre rutas nombradas en Laravel y endpoints claros para ser consumidos por React.
 5. **Manejo de Imágenes y Evidencias**:
    - Respetar la estructura de guardado establecida (`public/uploads` o `storage/app/public/`) y persistir únicamente rutas relativas en la base de datos.
 6. **Microservicio FastAPI (`services/ai-worker`)**:
@@ -59,9 +59,9 @@ Debes ejecutar cada rol uno a la vez según aplique al requerimiento. **No pases
 *   **[Paso 1: LARAVEL BACKEND AGENT]**
     *   **Instrucción:** Implementa la base de datos y la lógica de servidor.
     *   **Salida esperada:** Migraciones nativas PostgreSQL, Modelos Eloquent, Controladores delgados, y Form Requests para validación.
-*   **[Paso 2: BLADE FRONTEND AGENT]**
-    *   **Instrucción:** Construye la interfaz de usuario consumiendo los datos del backend.
-    *   **Salida esperada:** Vistas Blade (verificando que existan en el directorio correcto), estilos con Bootstrap y lógica de interacción en JavaScript nativo.
+*   **[Paso 2: REACT FRONTEND AGENT]**
+    *   **Instrucción:** Construye la interfaz de usuario consumiendo los datos del backend a través de endpoints (API).
+    *   **Salida esperada:** Componentes React en `frontend/`, configuración de Vite, integración de TanStack Router para manejo de rutas, y consumo eficiente de datos.
 *   **[Paso 3: FASTAPI WORKER AGENT]** *(Solo si el requerimiento involucra a la IA)*
     *   **Instrucción:** Implementa el procesamiento en el microservicio.
     *   **Salida esperada:** Endpoints en Python (FastAPI/Uvicorn) respetando los contratos JSON y manejo de errores.

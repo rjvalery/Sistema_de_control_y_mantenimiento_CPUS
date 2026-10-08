@@ -23,7 +23,7 @@ class CargueMasivoController extends Controller
     public function index(Request $request)
     {
         if (!in_array(Auth::user()->rol, ['admin', 'analista'])) {
-            return redirect()->route('login')->with('error', 'Acceso denegado.');
+            return response()->json(['error' => 'Acceso denegado.'], 403);
         }
 
         return view('cargue_masivo.index', [
@@ -83,7 +83,7 @@ class CargueMasivoController extends Controller
         $ext = strtolower($file->getClientOriginalExtension());
 
         if (!in_array($ext, ['csv', 'txt', 'xlsx', 'xls'])) {
-            return redirect()->route('inventario.index')->with('error', 'El archivo debe tener formato Excel (.xlsx) o delimitado (.csv / .txt).');
+            return response()->json(['error' => 'El archivo debe tener formato Excel (.xlsx) o delimitado (.csv / .txt).'], 403);
         }
 
         $realPath = $file->getRealPath();
@@ -99,21 +99,21 @@ class CargueMasivoController extends Controller
                 } else {
                     $datosExcel = $this->parserService->extraerFilasDesdeHtmlXls($realPath);
                     if ($datosExcel === null) {
-                        return redirect()->route('inventario.index')->with('error', 'El archivo .xls tiene un formato binario antiguo. Por favor guárdalo como .xlsx o .csv.');
+                        return response()->json(['error' => 'El archivo .xls tiene un formato binario antiguo. Por favor guárdalo como .xlsx o .csv.'], 403);
                     }
                 }
                 if (empty($datosExcel['headers'])) {
-                    return redirect()->route('inventario.index')->with('error', 'El archivo Excel no contiene encabezados válidos o está vacío.');
+                    return response()->json(['error' => 'El archivo Excel no contiene encabezados válidos o está vacío.'], 403);
                 }
                 $rawHeaders = $datosExcel['headers'];
                 $filasExcel = $datosExcel['rows'];
             } catch (\Throwable $e) {
-                return redirect()->route('inventario.index')->with('error', 'Error al procesar el archivo Excel: ' . $e->getMessage());
+                return response()->json(['error' => 'Error al procesar el archivo Excel: ' . $e->getMessage()], 403);
             }
         } else {
             $handleCsv = fopen($realPath, 'r');
             if (!$handleCsv) {
-                return redirect()->route('inventario.index')->with('error', 'No se pudo abrir el archivo CSV para lectura.');
+                return response()->json(['error' => 'No se pudo abrir el archivo CSV para lectura.'], 403);
             }
             $bom = fread($handleCsv, 3);
             $offset = ($bom === "\xEF\xBB\xBF") ? 3 : 0;
@@ -122,7 +122,7 @@ class CargueMasivoController extends Controller
             $rawHeaders = fgetcsv($handleCsv, 0, $delimitador);
             if (!$rawHeaders || $this->parserService->filaEstaVacia($rawHeaders)) {
                 fclose($handleCsv);
-                return redirect()->route('inventario.index')->with('error', 'El archivo no contiene encabezados válidos o está vacío.');
+                return response()->json(['error' => 'El archivo no contiene encabezados válidos o está vacío.'], 403);
             }
         }
 
@@ -258,14 +258,14 @@ class CargueMasivoController extends Controller
         }
 
         if ($insertados > 0 && $errores === 0) {
-            return redirect()->route('inventario.index')->with('msg', "Cargue masivo completado con éxito bajo el Traslado {$numTraslado}. Se insertaron {$insertados} registros.");
+            return response()->json(['message' => "Cargue masivo completado con éxito bajo el Traslado {$numTraslado}. Se insertaron {$insertados} registros."]);
         }
 
         if ($insertados > 0 && $errores > 0) {
-            return redirect()->route('inventario.index')->with('msg', "Cargue parcial: Se insertaron {$insertados} registros. {$errores} filas fallaron.");
+            return response()->json(['message' => "Cargue parcial: Se insertaron {$insertados} registros. {$errores} filas fallaron."]);
         }
 
-        return redirect()->route('inventario.index')->with('error', "No se insertaron registros. Errores: " . implode(', ', $detallesErrores));
+        return response()->json(['error' => "No se insertaron registros. Errores: " . implode(', ', $detallesErrores)], 403);
     }
 
 }

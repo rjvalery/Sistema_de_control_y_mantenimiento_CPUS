@@ -22,7 +22,7 @@ class PortatilesController extends Controller
 
         // Verificación de permiso para consultar la bitácora de Portátiles
         if (!$user || (!$user->can('portatiles.ver_bitacora') && !$user->hasRole('admin'))) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico Portátiles.');
+            return response()->json(['error' => 'No tienes permisos para acceder a la bitácora de Diagnóstico Portátiles.'], 403);
         }
 
         $datos = $this->obtenerDatosPaginados(
@@ -32,17 +32,17 @@ class PortatilesController extends Controller
             'created_at'
         );
 
-        return view('portatiles.index', $datos);
+        return response()->json($datos);
     }
 
     public function create()
     {
         if (!auth()->user()->can('portatiles.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos diagnósticos de portátiles.');
+            return response()->json(['error' => 'No tienes permisos para registrar nuevos diagnósticos de portátiles.'], 403);
         }
 
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->orderBy('nombre')->get();
-        return view('portatiles.create', compact('analistas'));
+        return response()->json(compact('analistas'));
     }
 
     public function ultimoRegistro(Request $request)
@@ -59,7 +59,7 @@ class PortatilesController extends Controller
     {
         $placaInicial = $request->query('placa', '');
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->orderBy('nombre')->get();
-        return view('portatiles.evidencia', compact('placaInicial', 'analistas'));
+        return response()->json(compact('placaInicial', 'analistas'));
     }
 
     public function guardarEvidencia(Request $request)
@@ -104,7 +104,7 @@ class PortatilesController extends Controller
     public function store(StorePortatilRequest $request)
     {
         if (!auth()->user()->can('portatiles.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar intervenciones de portátiles.');
+            return response()->json(['error' => 'No tienes permisos para registrar intervenciones de portátiles.'], 403);
         }
 
         $placa = $request->placa_id_equipo ?? $request->placa;
@@ -180,14 +180,14 @@ class PortatilesController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => 'Guardado correctamente']);
             }
-            return redirect()->route('portatiles.create')->with('msg', 'Guardado correctamente');
+            return response()->json(['message' => 'Guardado correctamente']);
 
         } catch (Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error en PortatilesController@store: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['error' => 'Error: ' . $e->getMessage()], 500);
             }
-            return back()->withInput()->with('error', 'Error al guardar: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al guardar: ' . $e->getMessage()], 500);
         }
     }
 }

@@ -22,7 +22,7 @@ class SopladoController extends Controller
 
         // Verificación de permiso para consultar la bitácora de Soplado
         if (!$user || (!$user->can('soplado.ver_bitacora') && !$user->hasRole('admin'))) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Mantenimiento / Soplado.');
+            return response()->json(['error' => 'No tienes permisos para acceder a la bitácora de Mantenimiento / Soplado.'], 403);
         }
 
         $datos = $this->obtenerDatosPaginados(
@@ -32,17 +32,17 @@ class SopladoController extends Controller
             'created_at'
         );
 
-        return view('soplado.index', $datos);
+        return response()->json($datos);
     }
 
     public function create()
     {
         if (!auth()->user()->can('soplado.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos mantenimientos de soplado.');
+            return response()->json(['error' => 'No tienes permisos para registrar nuevos mantenimientos de soplado.'], 403);
         }
 
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->orderBy('nombre')->get();
-        return view('soplado.create', compact('analistas'));
+        return response()->json(compact('analistas'));
     }
 
     public function ultimoRegistro(Request $request)
@@ -56,7 +56,7 @@ class SopladoController extends Controller
     public function store(StoreSopladoRequest $request)
     {
         if (!auth()->user()->can('soplado.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar soplado.');
+            return response()->json(['error' => 'No tienes permisos para registrar soplado.'], 403);
         }
 
         $placaFinal = $request->placa_id ?? $request->placa;
@@ -101,13 +101,13 @@ class SopladoController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => 'Guardado correctamente']);
             }
-            return redirect()->route('soplado.create')->with('msg', 'Guardado correctamente');
+            return response()->json(['message' => 'Guardado correctamente']);
 
         } catch (Exception $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['error' => 'Error: ' . $e->getMessage()], 500);
             }
-            return back()->withInput()->with('error', 'Error al guardar: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al guardar: ' . $e->getMessage()], 500);
         }
     }
 }

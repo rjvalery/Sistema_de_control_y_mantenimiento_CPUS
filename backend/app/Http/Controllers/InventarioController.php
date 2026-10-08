@@ -23,7 +23,7 @@ class InventarioController extends Controller
     public function index(Request $request)
     {
         if (!in_array(Auth::user()->rol, ['admin', 'analista'])) {
-            return redirect()->route('login')->with('error', 'Acceso denegado.');
+            return response()->json(['error' => 'Acceso denegado.'], 403);
         }
 
         $busqueda = trim($request->query('buscar'));
@@ -104,11 +104,11 @@ class InventarioController extends Controller
     public function show($id)
     {
         if (!in_array(Auth::user()->rol, ['admin', 'analista'])) {
-            return redirect()->route('login')->with('error', 'Acceso denegado.');
+            return response()->json(['error' => 'Acceso denegado.'], 403);
         }
 
         $equipo = InventarioGeneral::findOrFail($id);
-        return view('inventario.show', compact('equipo'));
+        return response()->json(compact('equipo'));
     }
 
     public function sincronizar(Request $request)

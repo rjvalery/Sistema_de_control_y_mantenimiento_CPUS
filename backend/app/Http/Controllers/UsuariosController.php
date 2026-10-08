@@ -36,7 +36,7 @@ class UsuariosController extends Controller
         $usuarios = $query->orderBy('id', 'desc')->get();
         $roles = Rol::all();
 
-        return view('usuarios.index', compact('usuarios', 'roles', 'busqueda'));
+        return response()->json(compact('usuarios', 'roles', 'busqueda'));
     }
 
     /**
@@ -59,7 +59,7 @@ class UsuariosController extends Controller
 
         $usuario->rolesRelation()->attach($rolModel->id);
 
-        return redirect()->route('usuarios.index')->with('msg', 'Usuario creado exitosamente.');
+        return response()->json(['message' => 'Usuario creado exitosamente.']);
     }
 
     /**
@@ -94,7 +94,7 @@ class UsuariosController extends Controller
 
         $usuario->rolesRelation()->sync([$rolModel->id]);
 
-        return redirect()->route('usuarios.index')->with('msg', 'Usuario actualizado exitosamente.');
+        return response()->json(['message' => 'Usuario actualizado exitosamente.']);
     }
 
     /**
@@ -131,7 +131,7 @@ class UsuariosController extends Controller
             $usuario->delete();
         });
 
-        return redirect()->route('usuarios.index')->with('msg', 'El usuario ' . $nombre . ' ha sido eliminado exitosamente.');
+        return response()->json(['message' => 'El usuario ' . $nombre . ' ha sido eliminado exitosamente.']);
     }
 
     public function cambiarPasswordPropia(ChangePasswordRequest $request)
@@ -185,7 +185,7 @@ class UsuariosController extends Controller
         }
         $permisosPorRol = $permisosPorRol->unique()->toArray();
 
-        return view('usuarios.permisos', compact('usuario', 'permisosPorModulo', 'permisosDirectos', 'permisosPorRol'));
+        return response()->json(compact('usuario', 'permisosPorModulo', 'permisosDirectos', 'permisosPorRol'));
     }
 
     /**
@@ -208,6 +208,6 @@ class UsuariosController extends Controller
         // Guardar permisos directamente en el usuario (sincroniza sin dejar huérfanos)
         $usuario->permisosRelation()->sync($permisosValidos);
 
-        return redirect()->route('usuarios.index')->with('msg', 'Permisos de ' . $usuario->nombre . ' actualizados exitosamente.');
+        return response()->json(['message' => 'Permisos de ' . $usuario->nombre . ' actualizados exitosamente.']);
     }
 }

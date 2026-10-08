@@ -1,0 +1,66 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cpu-diagnostics-app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: CPU Diagnostics
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8000
+      APP_KEY: ${APP_KEY:?Define APP_KEY in .env}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: cpu_diagnostics
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in .env}
+      AI_WORKER_URL: http://ai-worker:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-worker:
+        condition: service_healthy
+    volumes:
+      - laravel_storage:/var/www/html/storage
+      - laravel_uploads:/var/www/html/public/uploads
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cpu_diagnostics
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d cpu_diagnostics"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-worker:
+    build:
+      context: .
+      dockerfile: services/ai-worker/Dockerfile
+    image: cpu-diagnostics-ai-worker
+    restart: unless-stopped
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  laravel_storage:
+  laravel_uploads:

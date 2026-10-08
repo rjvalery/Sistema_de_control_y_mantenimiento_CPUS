@@ -33,7 +33,7 @@ class DashboardController extends Controller
             return response()->json($this->formatearRespuestaJson($data));
         }
 
-        return view('dashboard.index', $data);
+        return response()->json($data);
     }
 
     public function metricas(Request $request, \App\Services\DashboardMetricasService $service)

@@ -20,13 +20,13 @@ class DiademasController extends Controller
             $lotes = collect([]); // Fallback
         }
 
-        return view('diademas.index', compact('lotes'));
+        return response()->json(compact('lotes'));
     }
 
     public function create()
     {
         $analistas = class_exists('\App\Models\Usuario') ? \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->get() : [];
-        return view('diademas.create', compact('analistas'));
+        return response()->json(compact('analistas'));
     }
 
     public function store(GuardarLoteDiademasRequest $request)

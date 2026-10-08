@@ -22,7 +22,7 @@ class EquiposController extends Controller
 
         // Verificación de permiso para consultar la bitácora de CPUs
         if (!$user || (!$user->can('cpus.ver_bitacora') && !$user->hasRole('admin'))) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder a la bitácora de Diagnóstico CPU.');
+            return response()->json(['error' => 'No tienes permisos para acceder a la bitácora de Diagnóstico CPU.'], 403);
         }
 
         $datos = $this->obtenerDatosPaginados(
@@ -32,23 +32,23 @@ class EquiposController extends Controller
             'fecha_creacion'
         );
 
-        return view('equipos.index', $datos);
+        return response()->json($datos);
     }
 
     public function create()
     {
         if (!auth()->user()->can('cpus.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar nuevos diagnósticos de CPU.');
+            return response()->json(['error' => 'No tienes permisos para registrar nuevos diagnósticos de CPU.'], 403);
         }
 
         $analistas = \App\Models\Usuario::where('rol', 'analista')->where('activo', true)->get();
-        return view('equipos.create', compact('analistas'));
+        return response()->json(compact('analistas'));
     }
 
     public function store(StoreEquipoRequest $request)
     {
         if (!auth()->user()->can('cpus.registrar') && !auth()->user()->hasRole('admin')) {
-            return redirect()->route('dashboard')->with('error', 'No tienes permisos para guardar diagnósticos de CPU.');
+            return response()->json(['error' => 'No tienes permisos para guardar diagnósticos de CPU.'], 403);
         }
 
         $placaFinal = $request->placa_id ?? $request->placa;
@@ -105,13 +105,13 @@ class EquiposController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => 'Guardado correctamente']);
             }
-            return redirect()->route('equipos.create')->with('msg', 'Guardado correctamente');
+            return response()->json(['message' => 'Guardado correctamente']);
 
         } catch (Exception $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['error' => 'Error: ' . $e->getMessage()], 500);
             }
-            return back()->withInput()->with('error', 'Error al guardar: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al guardar: ' . $e->getMessage()], 500);
         }
     }
 }

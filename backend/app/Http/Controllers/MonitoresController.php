@@ -40,19 +40,12 @@ class MonitoresController extends Controller
             $monitores = collect([]); // Fallback temporal antes de migrar
         }
         
-        return view('monitores.index', compact('monitores'));
+        return response()->json(compact('monitores'));
     }
 
     public function create()
     {
-        return view('monitores.create');
-    }
-
-    public function buscarEquipo($serial)
-    {
-        // Buscar en inventario general usando el servicio o consulta directa
-        $equipo = InventarioGeneral::buscarPorTermino($serial);
-        $traslado = InventarioGeneral::buscarTrasladoEnSistema($serial, $equipo);
+        return response()->json($equipo);
 
         return response()->json([
             'encontrado' => !!$equipo,
