@@ -33,6 +33,7 @@ class StorePortatilRequest extends FormRequest
             'pieza_intervenida'              => ['nullable', 'string', 'max:150'],
             'origen_pieza'                   => ['nullable', 'string', 'max:150'],
             'motivo_baja'                    => ['nullable', 'string'],
+            'comentario_baja'                => ['nullable', 'string'],
             'serial_disco'                   => ['nullable', 'string', 'max:100'],
             'reparado_por'                   => ['nullable', 'string', 'max:100'],
             'comentario_reparado'            => ['nullable', 'string'],

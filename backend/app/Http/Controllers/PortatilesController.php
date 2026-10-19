@@ -136,9 +136,15 @@ class PortatilesController extends Controller
 
         $reparadoPor = $request->reparado_por;
         $comentarioRep = $request->comentario_reparado;
-        $diagnosticoFinal = ($estadoActual === 'Reparado') 
-            ? ($reparadoPor ? "[$reparadoPor] $comentarioRep" : $comentarioRep)
-            : $request->diagnostico_laptop_intervenido;
+        $comentarioBaja = $request->comentario_baja;
+
+        if ($estadoActual === 'Reparado') {
+            $diagnosticoFinal = $reparadoPor ? "[$reparadoPor] $comentarioRep" : $comentarioRep;
+        } elseif ($estadoActual === 'Baja' && !empty($comentarioBaja)) {
+            $diagnosticoFinal = $comentarioBaja;
+        } else {
+            $diagnosticoFinal = $request->diagnostico_laptop_intervenido;
+        }
 
         $estadoFinal = ($estadoActual === 'Reparado' && $reparadoPor) 
             ? "Reparado por $reparadoPor" 

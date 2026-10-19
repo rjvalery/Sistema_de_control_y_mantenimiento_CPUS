@@ -24,6 +24,24 @@ function mostrarModal(icono, titulo, mensaje, esError = false) {
     new bootstrap.Modal(document.getElementById('modalEmergente')).show();
 }
 
+function evaluarMotivoBaja(motivo) {
+    const bloqueComentario = document.getElementById('bloque_comentario_baja');
+    const txtComentarioBaja = document.getElementById('comentario_baja');
+    if (!bloqueComentario) return;
+
+    if (motivo === 'Baja total') {
+        bloqueComentario.classList.remove('d-none');
+        if (txtComentarioBaja) {
+            txtComentarioBaja.required = true;
+        }
+    } else {
+        bloqueComentario.classList.add('d-none');
+        if (txtComentarioBaja) {
+            txtComentarioBaja.required = false;
+        }
+    }
+}
+
 function evaluarEstadoEquipo(estado) {
     const secGarantia = document.getElementById('seccion_garantia');
     const secDiagnostico = document.getElementById('seccion_diagnostico');
@@ -44,6 +62,8 @@ function evaluarEstadoEquipo(estado) {
     secRepuesto.classList.add('d-none');
     secBaja.classList.add('d-none');
     if (secReparado) secReparado.classList.add('d-none');
+
+    evaluarMotivoBaja('');
 
     if (ticketInput) {
         ticketInput.required = false;
@@ -120,6 +140,7 @@ function evaluarEstadoEquipo(estado) {
         secBaja.classList.remove('d-none');
         if (motivoBajaSelect) {
             motivoBajaSelect.required = true;
+            evaluarMotivoBaja(motivoBajaSelect.value);
         }
     }
 }
@@ -268,6 +289,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const estadoSelect = document.getElementById('estado_actual_equipo');
     if (estadoSelect) {
         evaluarEstadoEquipo(estadoSelect.value);
+    }
+
+    const motivoBajaSelect = document.getElementById('motivo_baja');
+    if (motivoBajaSelect) {
+        motivoBajaSelect.addEventListener('change', function() {
+            evaluarMotivoBaja(this.value);
+        });
     }
 
     const placaInput = document.getElementById('placa_id_equipo');

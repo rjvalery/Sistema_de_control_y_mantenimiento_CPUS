@@ -202,7 +202,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Motivo de baja *</label>
-                                        <select name="motivo_baja" id="motivo_baja" class="form-select">
+                                        <select name="motivo_baja" id="motivo_baja" class="form-select" onchange="evaluarMotivoBaja(this.value)">
                                             <option value="" disabled {{ old('motivo_baja') === null ? 'selected' : '' }}>-- Seleccione una opción --</option>
                                             <option value="Obsoleto" {{ old('motivo_baja') == 'Obsoleto' ? 'selected' : '' }}>Obsoleto</option>
                                             <option value="Baja total" {{ old('motivo_baja') == 'Baja total' ? 'selected' : '' }}>Baja total</option>
@@ -214,6 +214,12 @@
                                             <span class="input-group-text bg-white text-muted"><i class="fa-solid fa-hard-drive"></i></span>
                                             <input type="text" name="serial_disco" id="serial_disco" class="form-control" value="{{ old('serial_disco') }}" placeholder="Ej: S3Z1NX0T123456">
                                         </div>
+                                    </div>
+                                    <div class="col-12 d-none" id="bloque_comentario_baja">
+                                        <label class="form-label fw-bold text-dark">
+                                            <i class="fa-solid fa-comment-dots text-danger me-2"></i>Comentario u Observaciones de la Baja Total *
+                                        </label>
+                                        <textarea name="comentario_baja" id="comentario_baja" class="form-control" rows="2" placeholder="Detalle los motivos, daños irreparables u observaciones de la baja total...">{{ old('comentario_baja') }}</textarea>
                                     </div>
                                 </div>
                             </div>
