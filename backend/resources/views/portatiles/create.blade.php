@@ -287,5 +287,5 @@
         ultimoRegistro: '{{ route("portatiles.ultimo_registro") }}'
     };
 </script>
-<script src="{{ asset('assets/js/portatiles_formulario.js') }}"></script>
+<script src="{{ asset('assets/js/portatiles_formulario.js') }}?v={{ time() }}"></script>
 @endsection

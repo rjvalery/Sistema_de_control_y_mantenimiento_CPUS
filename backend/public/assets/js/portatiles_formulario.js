@@ -323,6 +323,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             ` : '';
 
                             if (eq.intervenido) {
+                                const comentarioPrevioHtml = eq.comentario_previo ? `
+                                    <div class="mt-2 p-2 bg-white bg-opacity-75 rounded border border-warning-subtle text-dark">
+                                        <i class="fa-solid fa-comment-dots text-warning me-1"></i><strong>Comentario / Diagnóstico previo:</strong> ${escapeHtml(eq.comentario_previo)}
+                                    </div>
+                                ` : '';
+
                                 feedbackDiv.innerHTML = `
                                     <div class="alert alert-warning py-2 px-3 mb-0 small border-warning shadow-sm">
                                         <div class="d-flex align-items-center mb-1">
@@ -338,6 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div class="text-muted mt-1 small">
                                             <i class="fa-regular fa-clock me-1"></i>Intervenido el <strong>${escapeHtml(eq.fecha_intervencion || '')}</strong> en módulo <strong>${escapeHtml(eq.modulo_intervencion || '')}</strong> por <strong>${escapeHtml(eq.analista_intervencion || 'N/A')}</strong>.
                                         </div>
+                                        ${comentarioPrevioHtml}
                                     </div>
                                 `;
                             } else {

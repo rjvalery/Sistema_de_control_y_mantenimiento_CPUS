@@ -12,7 +12,7 @@
     <div class="card-body">
         <form method="GET" action="{{ route('portatiles.index') }}" class="row g-2 mb-4 align-items-center">
             <div class="col-md-4">
-                <input type="text" name="buscar" class="form-control form-control-sm" placeholder="Buscar placa, traslado, ticket o analista..." value="{{ request('buscar') }}">
+                <input type="text" name="buscar" class="form-control form-control-sm" placeholder="Buscar placa, traslado, ticket, analista o comentario..." value="{{ request('buscar') }}">
             </div>
             <div class="col-md-2">
                 <input type="date" name="fecha_desde" class="form-control form-control-sm" title="Fecha desde" value="{{ request('fecha_desde') }}">
@@ -47,6 +47,7 @@
                         <th>Ticket</th>
                         <th>Analista</th>
                         <th>Estado Actual</th>
+                        <th>Diagnóstico / Comentarios</th>
                         <th>Estado Final</th>
                         <th class="text-center">Evidencia</th>
                     </tr>
@@ -65,6 +66,42 @@
                                 {{ $row->estado_actual_equipo }}
                             </span>
                         </td>
+                        <td>
+                            @php
+                                $diagComentario = trim((string)$row->diagnostico_laptop_intervenido);
+                                $motivoGarantia = trim((string)$row->porque_solicita_garantia);
+                                $motivoBaja = trim((string)$row->motivo_baja);
+                                $piezas = trim(($row->indique_pieza ?? '') . ($row->indique_fru ? ' (FRU: ' . $row->indique_fru . ')' : ''));
+                                
+                                $tieneInfo = !empty($diagComentario) || !empty($motivoGarantia) || !empty($motivoBaja) || !empty($piezas);
+                            @endphp
+                            @if($tieneInfo)
+                                <div class="small text-dark text-break" style="min-width: 260px; max-width: 450px; white-space: normal; line-height: 1.35;">
+                                    @if(!empty($diagComentario))
+                                        <div class="fw-medium text-dark mb-1">{{ $diagComentario }}</div>
+                                    @endif
+                                    @if(!empty($motivoGarantia))
+                                        <div class="text-warning-emphasis mb-1">
+                                            <i class="fa-solid fa-shield-halved me-1 text-warning"></i><strong>Garantía:</strong> {{ $motivoGarantia }}
+                                        </div>
+                                    @endif
+                                    @if(!empty($motivoBaja))
+                                        <div class="text-danger mb-1">
+                                            <i class="fa-solid fa-trash-can me-1 text-danger"></i><strong>Baja:</strong> {{ $motivoBaja }}
+                                        </div>
+                                    @endif
+                                    @if(!empty($piezas))
+                                        <div class="mt-1">
+                                            <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.78rem;">
+                                                <i class="fa-solid fa-microchip me-1 text-info"></i>{{ $piezas }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="text-muted small">Sin comentarios</span>
+                            @endif
+                        </td>
                         <td><small class="text-muted">{{ $row->estado_final_equipo ?: 'N/A' }}</small></td>
                         <td class="text-center">
                             @if(!empty($row->foto_ruta) || !empty($row->evidencia))
@@ -78,7 +115,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">
+                        <td colspan="10" class="text-center py-4 text-muted">
                             <i class="fa-solid fa-inbox fa-2x mb-2 d-block text-secondary"></i>
                             No se encontraron registros de portátiles con los criterios seleccionados.
                         </td>

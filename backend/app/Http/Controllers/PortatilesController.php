@@ -28,7 +28,16 @@ class PortatilesController extends Controller
         $datos = $this->obtenerDatosPaginados(
             GarantiaPortatil::query(),
             $request,
-            ['placa_id_equipo', 'numero_traslado', 'numero_ticket', 'nombre_analista', 'estado_actual_equipo'],
+            [
+                'placa_id_equipo',
+                'numero_traslado',
+                'numero_ticket',
+                'nombre_analista',
+                'estado_actual_equipo',
+                'diagnostico_laptop_intervenido',
+                'porque_solicita_garantia',
+                'motivo_baja'
+            ],
             'created_at'
         );
 

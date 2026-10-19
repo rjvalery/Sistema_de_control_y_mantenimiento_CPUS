@@ -171,7 +171,10 @@ class TrazabilidadService
 
                 if ($portatilPrevio && (!$diagnosticoPrevio || Carbon::parse($fechaPort) > Carbon::parse($fechaDiag))) {
                     $fecha = Carbon::parse($fechaPort)->format('d/m/Y H:i');
-                    $falla = $portatilPrevio->falla_reportada ?? 'N/A';
+                    $falla = $portatilPrevio->diagnostico_laptop_intervenido 
+                        ?: ($portatilPrevio->porque_solicita_garantia 
+                        ?: ($portatilPrevio->motivo_baja ?: 'Sin observaciones'));
+                    $analista = $portatilPrevio->nombre_analista ?: 'N/A';
                     return [
                         'encontrado' => true,
                         'equipo' => array_merge($datosBase, [
@@ -179,17 +182,22 @@ class TrazabilidadService
                             'serial'                => $portatilPrevio->serial_disco ?: $datosBase['serial'],
                             'num_traslado'          => $datosBase['num_traslado'] ?: ($portatilPrevio->numero_traslado ?? ''),
                             'alerta'                => 'amarillo',
-                            'mensaje'               => "Atención: Este equipo (Portátil/Tablet) cuenta con un registro previo realizado por " . ($portatilPrevio->usuario ?? 'N/A') . " el " . $fecha . ". Falla previa: " . $falla,
+                            'mensaje'               => "Atención: Este equipo (Portátil/Tablet) cuenta con un registro previo realizado por " . $analista . " el " . $fecha . ". Comentario / Diagnóstico previo: " . $falla,
+                            'comentario_previo'     => $falla,
                             'intervenido'           => true,
                             'fecha_intervencion'    => $fechaPort,
                             'modulo_intervencion'   => 'Diagnóstico Portátil',
-                            'analista_intervencion' => $portatilPrevio->usuario,
+                            'analista_intervencion' => $analista,
                         ])
                     ];
                 }
 
                 $fecha = Carbon::parse($fechaDiag)->format('d/m/Y H:i');
-                $falla = $diagnosticoPrevio->falla_reportada ?? 'N/A';
+                $falla = $diagnosticoPrevio->descripcion_novedad 
+                    ?: ($diagnosticoPrevio->solucion_garantias 
+                    ?: ($diagnosticoPrevio->novedad_it 
+                    ?: ($diagnosticoPrevio->motivo_baja ?: 'Sin observaciones')));
+                $analista = $diagnosticoPrevio->nombre_analista ?: 'N/A';
                 
                 return [
                     'encontrado' => true,
@@ -198,11 +206,12 @@ class TrazabilidadService
                         'serial'                => $datosBase['serial'],
                         'num_traslado'          => $datosBase['num_traslado'] ?: ($diagnosticoPrevio->num_traslado ?? ''),
                         'alerta'                => 'amarillo',
-                        'mensaje'               => "Atención: Este equipo ya cuenta con diagnóstico previo realizado por " . $diagnosticoPrevio->nombre_analista . " el " . $fecha . ". Motivo / Falla previa: " . $falla,
+                        'mensaje'               => "Atención: Este equipo ya cuenta con diagnóstico previo realizado por " . $analista . " el " . $fecha . ". Motivo / Comentario previo: " . $falla,
+                        'comentario_previo'     => $falla,
                         'intervenido'           => true,
                         'fecha_intervencion'    => $fechaDiag,
                         'modulo_intervencion'   => 'Diagnóstico CPU',
-                        'analista_intervencion' => $diagnosticoPrevio->nombre_analista,
+                        'analista_intervencion' => $analista,
                     ])
                 ];
             }
@@ -338,10 +347,15 @@ class TrazabilidadService
                 'analista' => $e->nombre_analista,
                 'traslado' => $e->num_traslado,
                 'detalles' => array_filter([
-                    'Falla Reportada' => $e->falla_reportada,
-                    'Estado Técnico' => $e->estado_tecnico,
-                    'Diagnóstico' => $e->diagnostico,
-                    'Procedimiento' => $e->procedimiento
+                    'Tipo Gestión' => $e->tipo_gestion,
+                    'Estado Actual' => $e->estado_actual,
+                    'Novedad / Diagnóstico' => $e->descripcion_novedad,
+                    'Solución Garantías' => $e->solucion_garantias,
+                    'Gestión IT' => $e->novedad_it,
+                    'Motivo Baja' => $e->motivo_baja,
+                    'Intervención' => $e->que_va_intervenir,
+                    'Energiza' => $e->energiza,
+                    'Da Video' => $e->da_video,
                 ]),
                 'icono' => 'fa-microchip',
                 'color' => 'warning'
@@ -355,16 +369,21 @@ class TrazabilidadService
         foreach ($portatiles as $p) {
             $timeline[] = [
                 'tipo' => 'diagnostico',
-                'modulo' => 'Garantía Portátil',
+                'modulo' => 'Diagnóstico Portátil',
                 'fecha' => Carbon::parse($p->created_at ?? $p->fecha_creacion)->format('Y-m-d H:i:s'),
                 'fecha_obj' => Carbon::parse($p->created_at ?? $p->fecha_creacion),
-                'analista' => $p->usuario,
+                'analista' => $p->nombre_analista ?: 'Sistema',
                 'traslado' => $p->numero_traslado,
                 'detalles' => array_filter([
-                    'Falla Reportada' => $p->falla_reportada,
-                    'Estado' => $p->estado,
-                    'Diagnóstico' => $p->diagnostico,
-                    'Acciones' => $p->acciones
+                    'Estado Actual' => $p->estado_actual_equipo,
+                    'Estado Final' => $p->estado_final_equipo,
+                    'Diagnóstico / Comentario' => $p->diagnostico_laptop_intervenido,
+                    'Motivo Garantía' => $p->porque_solicita_garantia,
+                    'Motivo Baja' => $p->motivo_baja,
+                    'Ticket' => $p->numero_ticket,
+                    'Piezas / FRU' => trim(($p->indique_pieza ?? '') . ($p->indique_fru ? ' (' . $p->indique_fru . ')' : '')),
+                    'Energiza' => $p->energiza,
+                    'Da Video' => $p->da_video,
                 ]),
                 'icono' => 'fa-laptop-medical',
                 'color' => 'danger'
