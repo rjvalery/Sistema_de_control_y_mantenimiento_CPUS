@@ -50,9 +50,9 @@ class UploadService
 
     /**
      * Procesa la subida y almacenamiento físico de la evidencia según las reglas estrictas:
-     * C:\Users\LENOVO\Pictures\fotos\{Año}\{Mes}\{Dia}\{PLACA}.jpg
+     * C:\Users\LENOVO\Pictures\fotos\{modulo}\{Año}\{Mes}\{Dia}\{PLACA}.jpg
      */
-    public static function procesarSubidaFisica($request, string $modulo = 'cpus', ?string $placaForzada = null): ?string
+    public static function procesarSubidaFisica($request, string $modulo = 'diagnostico', ?string $placaForzada = null): ?string
     {
         if (!$request->hasFile('evidencia') && !$request->hasFile('foto') && !$request->hasFile('foto_equipo') && !$request->hasFile('foto_ruta')) {
             return null;
@@ -66,14 +66,20 @@ class UploadService
         $anio = now()->format('Y');
         $mesesEspanol = self::MESES;
         $mes = $mesesEspanol[(int)now()->format('n')] ?? ucfirst(now()->locale('es')->translatedFormat('F')); // Ej: Octubre
-        $dia = now()->format('d'); // Ej: 05
+        $dia = now()->format('d'); // Ej: 19
+
+        $moduloNormalizado = match(strtolower($modulo)) {
+            'cpus', 'cpu', 'equipos', 'diagnostico' => 'diagnostico',
+            'portatiles', 'portatil', 'laptop'     => 'portatiles',
+            'soplado', 'mantenimiento'             => 'soplado',
+            default                                => strtolower($modulo)
+        };
 
         // Ruta base física
-        $basePath = env('EVIDENCIAS_PATH', 'C:\\Users\\LENOVO\\Pictures\\fotos');
-        $basePath = rtrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR);
+        $basePath = self::getBasePath();
 
-        // Carpeta destino: C:\Users\LENOVO\Pictures\fotos\2026\Octubre\05
-        $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
+        // Carpeta destino: C:\Users\LENOVO\Pictures\fotos\diagnostico\2026\Octubre\19
+        $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $moduloNormalizado . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
 
         if (!File::isDirectory($directorioDestino)) {
             File::makeDirectory($directorioDestino, 0777, true, true);
@@ -88,22 +94,15 @@ class UploadService
         // Mover físicamente el archivo
         $archivo->move($directorioDestino, $nombreArchivo);
 
-        // Redundancia en subcarpeta del módulo para soporte total (ej: /fotos/cpus/2026/Octubre/05/B88147.jpg)
-        $directorioModulo = $basePath . DIRECTORY_SEPARATOR . $modulo . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
-        if (!File::isDirectory($directorioModulo)) {
-            File::makeDirectory($directorioModulo, 0777, true, true);
-        }
-        @copy($directorioDestino . DIRECTORY_SEPARATOR . $nombreArchivo, $directorioModulo . DIRECTORY_SEPARATOR . $nombreArchivo);
-
         return $nombreArchivo;
     }
 
     /**
-     * Sube y organiza evidencias en C:\Users\LENOVO\Pictures\fotos\{Año}\{Nombre_Mes}\{Dia}\{PLACA}.jpg
+     * Sube y organiza evidencias en C:\Users\LENOVO\Pictures\fotos\{modulo}\{Año}\{Nombre_Mes}\{Dia}\{PLACA}.jpg
      * Crea subdirectorios automáticamente con permisos de escritura.
      * Retorna el nombre del archivo o ruta esperada.
      */
-    public function guardarEvidencia(?UploadedFile $file, string $placaId, string $categoria = 'cpus'): ?string
+    public function guardarEvidencia(?UploadedFile $file, string $placaId, string $categoria = 'diagnostico'): ?string
     {
         if (!$file || !$file->isValid()) {
             return null;
@@ -114,8 +113,15 @@ class UploadService
         $mes       = self::getNombreMes(now()->format('n'));
         $dia       = now()->format('d');
 
-        // Subcarpeta patrón: {Año}/{Nombre_Mes}/{Dia}
-        $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
+        $moduloNormalizado = match(strtolower($categoria)) {
+            'cpus', 'cpu', 'equipos', 'diagnostico' => 'diagnostico',
+            'portatiles', 'portatil', 'laptop'     => 'portatiles',
+            'soplado', 'mantenimiento'             => 'soplado',
+            default                                => strtolower($categoria)
+        };
+
+        // Subcarpeta patrón: {modulo}/{Año}/{Nombre_Mes}/{Dia}
+        $directorioDestino = $basePath . DIRECTORY_SEPARATOR . $moduloNormalizado . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
 
         if (!File::isDirectory($directorioDestino)) {
             File::makeDirectory($directorioDestino, 0777, true, true);
@@ -133,13 +139,6 @@ class UploadService
             // Mover archivo directamente a la ruta física local
             $file->move($directorioDestino, $nombreArchivo);
 
-            // Redundancia en la subcarpeta del módulo
-            $moduloDir = $basePath . DIRECTORY_SEPARATOR . $categoria . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia;
-            if (!File::isDirectory($moduloDir)) {
-                File::makeDirectory($moduloDir, 0777, true, true);
-            }
-            @copy($directorioDestino . DIRECTORY_SEPARATOR . $nombreArchivo, $moduloDir . DIRECTORY_SEPARATOR . $nombreArchivo);
-
             return $nombreArchivo;
         } catch (\Throwable $e) {
             Log::error("UploadService: Error guardando evidencia en '{$directorioDestino}': " . $e->getMessage());
@@ -151,7 +150,7 @@ class UploadService
      * Construye de manera dinámica y segura la URL hacia route('evidencias.ver', ...)
      * abstrayendo si el campo en BD viene con ruta antigua, completa o solo nombre de archivo.
      */
-    public static function routeEvidencia(?string $fotoCampo, string $modulo = 'cpus', $fecha = null, ?string $placa = null): string
+    public static function routeEvidencia(?string $fotoCampo, string $modulo = 'diagnostico', $fecha = null, ?string $placa = null): string
     {
         if (empty($fotoCampo)) {
             return '#';
@@ -161,7 +160,7 @@ class UploadService
 
         // Normalizar módulo
         $moduloSlug = match(strtolower($modulo)) {
-            'equipos', 'diagnostico', 'cpu', 'cpus' => 'cpus',
+            'equipos', 'diagnostico', 'cpu', 'cpus' => 'diagnostico',
             'portatiles', 'portatil', 'laptop'     => 'portatiles',
             'soplado', 'mantenimiento'             => 'soplado',
             default                                => strtolower($modulo)

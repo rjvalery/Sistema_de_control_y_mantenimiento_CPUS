@@ -52,7 +52,7 @@ class EquiposController extends Controller
         }
 
         $placaFinal = $request->placa_id ?? $request->placa;
-        $nombreArchivo = UploadService::procesarSubidaFisica($request, 'cpus', $placaFinal);
+        $nombreArchivo = UploadService::procesarSubidaFisica($request, 'diagnostico', $placaFinal);
 
         $user = auth()->user();
         $nombreAnalista = ($user && $user->rol === 'analista') 

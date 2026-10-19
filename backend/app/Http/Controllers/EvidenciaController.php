@@ -15,18 +15,9 @@ class EvidenciaController extends Controller
      */
     public function ver(Request $request, $modulo, $anio, $mes, $dia, $archivo)
     {
-        // 1. Ruta base física estricta
-        $basePath = env('EVIDENCIAS_PATH', 'C:\\Users\\LENOVO\\Pictures\\fotos');
-        $basePath = rtrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $basePath), DIRECTORY_SEPARATOR);
-        $rutaFisica = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia . DIRECTORY_SEPARATOR . $archivo;
-
-        if (File::exists($rutaFisica) && !File::isDirectory($rutaFisica)) {
-            return response()->file($rutaFisica);
-        }
-
-        // 2. Comprobación en subcarpeta por módulo (ej: fotos/cpus/2026/Octubre/05/B88147.jpg)
+        // 1. Comprobación prioritaria en subcarpeta por módulo (ej: fotos/diagnostico/2026/Octubre/05/B88147.jpg)
         $moduloAliases = match(strtolower($modulo)) {
-            'cpus', 'cpu', 'equipos', 'diagnostico' => ['cpus', 'diagnostico', 'equipos'],
+            'cpus', 'cpu', 'equipos', 'diagnostico' => ['diagnostico', 'cpus', 'equipos'],
             'portatiles', 'portatil', 'laptop'     => ['portatiles', 'portatil'],
             'soplado', 'mantenimiento'             => ['soplado', 'mantenimiento'],
             default                                => [strtolower($modulo)]
@@ -37,6 +28,13 @@ class EvidenciaController extends Controller
             if (File::exists($rutaModulo) && !File::isDirectory($rutaModulo)) {
                 return response()->file($rutaModulo);
             }
+        }
+
+        // 2. Ruta física sin subcarpeta de módulo (compatibilidad fotos/{anio}/{mes}/{dia}/{archivo})
+        $rutaFisica = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia . DIRECTORY_SEPARATOR . $archivo;
+
+        if (File::exists($rutaFisica) && !File::isDirectory($rutaFisica)) {
+            return response()->file($rutaFisica);
         }
 
         // 3. Fallbacks de compatibilidad (raíz de fotos o directorio público)

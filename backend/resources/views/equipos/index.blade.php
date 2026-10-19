@@ -74,7 +74,7 @@
                         </td>
                         <td class="text-center">
                             @if(!empty($row->foto_equipo) || !empty($row->evidencia))
-                                <a href="{{ \App\Services\UploadService::routeEvidencia($row->foto_equipo ?? $row->evidencia, 'cpus', $row->fecha_creacion, $row->placa_id) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" title="Ver Evidencia Fotográfica">
+                                <a href="{{ \App\Services\UploadService::routeEvidencia($row->foto_equipo ?? $row->evidencia, 'diagnostico', $row->fecha_creacion, $row->placa_id) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" title="Ver Evidencia Fotográfica">
                                     <i class="fa-solid fa-image"></i>
                                 </a>
                             @else
