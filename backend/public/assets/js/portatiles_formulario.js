@@ -221,6 +221,11 @@ function enviarFormulario() {
     const placaInputEl = document.getElementById('placa_id_equipo');
     const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
+
+    const inputSerialEl = document.getElementById('serial');
+    if (inputSerialEl && inputSerialEl.value) {
+        formData.set('serial', inputSerialEl.value.trim());
+    }
     const tokenInput = document.querySelector('input[name="_token"]');
     const tokenMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
@@ -342,6 +347,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 inputTraslado.dataset.autofilled = 'true';
                                 inputTraslado.classList.add('is-valid');
                                 setTimeout(() => inputTraslado.classList.remove('is-valid'), 2500);
+                            }
+
+                            const inputSerial = document.getElementById('serial');
+                            if (inputSerial && eq.serial) {
+                                inputSerial.value = eq.serial;
                             }
 
                             const trasladoBadge = eq.num_traslado ? `

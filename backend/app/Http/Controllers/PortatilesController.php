@@ -116,7 +116,23 @@ class PortatilesController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar intervenciones de portátiles.');
         }
 
-        $placa = $request->placa_id_equipo ?? $request->placa;
+        $placa = trim((string)($request->placa_id_equipo ?? $request->placa));
+        $serialFinal = trim((string)$request->serial);
+
+        // Resolver serial o placa si uno de ellos falta
+        if (!empty($placa)) {
+            $inv = \App\Models\InventarioGeneral::buscarPorTermino($placa);
+            if ($inv) {
+                if (empty($serialFinal)) {
+                    $serialFinal = $inv->serial ?: ($inv->identificador_2 ?: null);
+                }
+                // Si el analista ingresó el serial en el campo de placa y existe la placa real en inventario
+                if (strcasecmp($inv->serial, $placa) === 0 && !empty($inv->placa_id)) {
+                    $placa = $inv->placa_id;
+                }
+            }
+        }
+
         $fotoRuta = UploadService::procesarSubidaFisica($request, 'portatiles', $placa);
 
         $user = auth()->user();
@@ -154,11 +170,12 @@ class PortatilesController extends Controller
         $garantia = ($estadoActual === 'Garantia') ? 'Aplica' : $request->garantia;
 
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $diagnosticoFinal, $garantia, $estadoFinal, $indiquePieza, $indiqueFru, $origenPieza, $placa) {
+            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $diagnosticoFinal, $garantia, $estadoFinal, $indiquePieza, $indiqueFru, $origenPieza, $placa, $serialFinal) {
                 $data = [
                     'nombre_analista'                => $nombreAnalista,
                     'numero_traslado'                => $request->numero_traslado,
                     'placa_id_equipo'                => $placa,
+                    'serial'                         => $serialFinal ?: null,
                     'tipo_gestion'                   => $request->tipo_gestion,
                     'energiza'                       => $request->energiza,
                     'da_video'                       => $request->da_video,
@@ -188,7 +205,8 @@ class PortatilesController extends Controller
                     $placa,
                     'Diagnóstico Portátiles',
                     $nombreAnalista,
-                    $request->numero_traslado
+                    $request->numero_traslado,
+                    $serialFinal
                 );
             });
 

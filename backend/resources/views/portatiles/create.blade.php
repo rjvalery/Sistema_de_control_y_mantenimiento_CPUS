@@ -45,6 +45,7 @@
                             <label class="form-label fw-bold">Placa ID o Serial del equipo *</label>
                             <div class="input-group">
                                 <input type="text" name="placa_id_equipo" id="placa_id_equipo" class="form-control" value="{{ old('placa_id_equipo') }}" placeholder="Ej: B123456 o Serial" required autocomplete="off">
+                                <input type="hidden" name="serial" id="serial" value="{{ old('serial') }}">
                                 <span class="input-group-text d-none" id="spinner_placa">
                                     <i class="fa-solid fa-spinner fa-spin text-primary"></i>
                                 </span>

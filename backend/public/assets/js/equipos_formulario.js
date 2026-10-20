@@ -199,6 +199,11 @@ async function enviarFormulario() {
     formData.set('placa', placaVal);
     formData.set('placa_id', placaVal);
 
+    const inputSerialEl = document.getElementById('serial');
+    if (inputSerialEl && inputSerialEl.value) {
+        formData.set('serial', inputSerialEl.value.trim());
+    }
+
     if (fotoOptimBlob) {
         formData.set('evidencia', fotoOptimBlob, 'foto_diagnostico.jpg');
         formData.set('foto', fotoOptimBlob, 'foto_diagnostico.jpg');
@@ -265,6 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             const eq = res.equipo;
                             if (inputTraslado && !inputTraslado.value && eq.num_traslado) {
                                 inputTraslado.value = eq.num_traslado;
+                            }
+
+                            const inputSerial = document.getElementById('serial');
+                            if (inputSerial && eq.serial) {
+                                inputSerial.value = eq.serial;
                             }
 
                             const trasladoBadge = eq.num_traslado ? `

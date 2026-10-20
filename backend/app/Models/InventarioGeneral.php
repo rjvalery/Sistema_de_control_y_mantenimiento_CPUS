@@ -130,7 +130,9 @@ class InventarioGeneral extends Model
             }
 
             // Buscar en equipos (Diagnóstico)
-            $eq = Equipo::whereIn('placa_id', $terminos)
+            $eq = Equipo::where(function($q) use ($terminos) {
+                    $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+                })
                 ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
                 ->orderBy('id', 'desc')->first();
             if ($eq) {
@@ -138,7 +140,9 @@ class InventarioGeneral extends Model
             }
 
             // Buscar en soplado
-            $so = SopladoRegistro::whereIn('placa_id', $terminos)
+            $so = SopladoRegistro::where(function($q) use ($terminos) {
+                    $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+                })
                 ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
                 ->orderBy('id', 'desc')->first();
             if ($so) {
@@ -147,7 +151,9 @@ class InventarioGeneral extends Model
 
             // Buscar en portátiles
             $po = GarantiaPortatil::where(function($q) use ($terminos) {
-                $q->whereIn('placa_id_equipo', $terminos)->orWhereIn('serial_disco', $terminos);
+                $q->whereIn('placa_id_equipo', $terminos)
+                  ->orWhereIn('serial', $terminos)
+                  ->orWhereIn('serial_disco', $terminos);
             })->whereNotNull('numero_traslado')->where('numero_traslado', '!=', '')
             ->orderBy('id', 'desc')->first();
             if ($po) {

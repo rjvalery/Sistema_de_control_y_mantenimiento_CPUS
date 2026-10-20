@@ -59,7 +59,23 @@ class SopladoController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para registrar soplado.');
         }
 
-        $placaFinal = $request->placa_id ?? $request->placa;
+        $placaFinal = trim((string)($request->placa_id ?? $request->placa));
+        $serialFinal = trim((string)$request->serial);
+
+        // Resolver serial o placa si uno de ellos falta
+        if (!empty($placaFinal)) {
+            $inv = \App\Models\InventarioGeneral::buscarPorTermino($placaFinal);
+            if ($inv) {
+                if (empty($serialFinal)) {
+                    $serialFinal = $inv->serial ?: ($inv->identificador_2 ?: null);
+                }
+                // Si el analista ingresó el serial en el campo de placa y existe la placa real en inventario
+                if (strcasecmp($inv->serial, $placaFinal) === 0 && !empty($inv->placa_id)) {
+                    $placaFinal = $inv->placa_id;
+                }
+            }
+        }
+
         $fotoRuta = UploadService::procesarSubidaFisica($request, 'soplado', $placaFinal);
 
         $user = auth()->user();
@@ -71,11 +87,12 @@ class SopladoController extends Controller
         $gelCucarachas = ($maquinaContenia === 'Cucaracha') ? ($request->gel_cucarachas ?: 'No') : 'No';
 
         try {
-            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $maquinaContenia, $gelCucarachas, $placaFinal) {
+            DB::transaction(function () use ($request, $fotoRuta, $nombreAnalista, $maquinaContenia, $gelCucarachas, $placaFinal, $serialFinal) {
                 $registro = SopladoRegistro::create([
                     'nombre_analista'  => $nombreAnalista,
                     'num_traslado'     => $request->num_traslado,
                     'placa_id'         => $placaFinal,
+                    'serial'           => $serialFinal ?: null,
                     'energiza'         => $request->energiza,
                     'da_video'         => $request->da_video,
                     'detecta_disco'    => $request->detecta_disco,
@@ -94,7 +111,8 @@ class SopladoController extends Controller
                     $placaFinal,
                     'soplado',
                     $nombreAnalista,
-                    $request->num_traslado
+                    $request->num_traslado,
+                    $serialFinal
                 );
             });
 

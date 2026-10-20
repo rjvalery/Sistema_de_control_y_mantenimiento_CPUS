@@ -17,6 +17,7 @@ class SopladoRegistro extends Model
         'nombre_analista',
         'num_traslado',
         'placa_id',
+        'serial',
         'energiza',
         'da_video',
         'detecta_disco',

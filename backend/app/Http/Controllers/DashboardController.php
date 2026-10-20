@@ -107,10 +107,26 @@ class DashboardController extends Controller
         $service = app(\App\Services\DashboardMetricasService::class);
         [$periodo, $inicio, $fin] = $service->resolverRangoFechas($periodo);
 
-        $query = InventarioGeneral::query()->with('garantiasPortatiles')->where('intervenido', 1);
+        $query = InventarioGeneral::query()->with(['garantiasPortatiles', 'equipos'])->where('intervenido', 1);
 
         if ($filtroAnalistaNombre) {
             $query->where('analista_intervencion', $filtroAnalistaNombre);
+        }
+
+        $paramModulo = strtolower(trim((string)$request->get('modulo', '')));
+        if ($paramModulo && $paramModulo !== 'todos') {
+            if (str_contains($paramModulo, 'cpu')) {
+                $query->where(function($q) {
+                    $q->where('modulo_intervencion', 'like', '%CPU%')
+                      ->orWhere('tipo_equipo', 'like', '%CPU%');
+                });
+            } elseif (str_contains($paramModulo, 'portat') || str_contains($paramModulo, 'laptop')) {
+                $query->where('modulo_intervencion', 'like', '%Portát%');
+            } elseif (str_contains($paramModulo, 'sopla')) {
+                $query->where('modulo_intervencion', 'like', '%sopla%');
+            } else {
+                $query->where('modulo_intervencion', 'like', "%{$paramModulo}%");
+            }
         }
 
         if ($inicio && $fin) {
@@ -122,7 +138,19 @@ class DashboardController extends Controller
 
         $query->orderBy('id', 'desc');
 
-        $encabezados = ['ID / RADICADO', 'PLACA', 'SERIAL', 'MÓDULO', 'MARCA', 'MODELO', 'FALLA / CONDICIÓN', 'TRASLADO', 'ANALISTA', 'FECHA INTERVENCIÓN'];
+        $encabezados = [
+            'ID / RADICADO',
+            'PLACA',
+            'SERIAL',
+            'MÓDULO',
+            'MARCA',
+            'MODELO',
+            'FALLA / CONDICIÓN',
+            'INTERVENCIÓN REALIZADA',
+            'TRASLADO',
+            'ANALISTA',
+            'FECHA INTERVENCIÓN'
+        ];
         
         $nombreArchivo = 'Bitacora_Maquinas_Intervenidas_' . Carbon::now('America/Bogota')->format('Y-m-d') . '.csv';
 
@@ -137,30 +165,204 @@ class DashboardController extends Controller
                 $fechaStr = '';
             }
 
-            // Buscar traslado de manera robusta usando la función del modelo
-            $traslado = \App\Models\InventarioGeneral::buscarTrasladoEnSistema($row->identificador_1 ?: ($row->placa_id ?: ''), $row);
+            // Usar traslado directo del registro si ya existe para máxima velocidad de exportación
+            $traslado = (!empty($row->num_traslado) && $row->num_traslado !== 'Sin Traslado')
+                ? $row->num_traslado
+                : \App\Models\InventarioGeneral::buscarTrasladoEnSistema($row->identificador_1 ?: ($row->placa_id ?: ''), $row);
 
-            // Determinar la falla o condición real
-            $fallaCondicion = $row->observaciones ?? ($row->estado ?? 'N/A');
-            $estadoRaw = strtoupper(trim((string)$row->estado));
-            
-            // Traducir estado 1 o similares a BAJA
-            if (in_array($estadoRaw, ['1', 'BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP'])) {
-                $fallaCondicion = 'BAJA';
-            }
+            $moduloRaw = strtolower(trim((string)$row->modulo_intervencion));
+            $fallaCondicion = '';
+            $intervencionRealizada = '';
 
-            // Detectar si es un equipo de garantía
-            if (stripos((string)$row->modulo_intervencion, 'portat') !== false || stripos((string)$row->modulo_intervencion, 'garant') !== false) {
-                $garantia = $row->garantiasPortatiles->first();
-                if ($garantia) {
-                    $estAct = strtoupper(trim((string)$garantia->estado_actual_equipo));
-                    $gar = strtoupper(trim((string)$garantia->garantia));
-                    if (str_contains($estAct, 'GARANT') || str_contains($gar, 'APLICA') || str_contains($gar, 'GARANT')) {
-                        $fallaCondicion = 'GARANTÍA';
+            // 1. Diagnóstico CPU / Equipos
+            $esCpu = str_contains($moduloRaw, 'cpu') 
+                || strtolower((string)$row->tipo_equipo) === 'cpu' 
+                || ($row->equipos && $row->equipos->isNotEmpty());
+
+            if ($esCpu) {
+                $equipos = $row->equipos ?? collect();
+                if ($equipos->isEmpty()) {
+                    $candidatos = array_unique(array_filter([
+                        $row->placa_id,
+                        $row->serial,
+                        $row->identificador_1,
+                        $row->identificador_2
+                    ]));
+                    if (!empty($candidatos)) {
+                        $equipos = \App\Models\Equipo::whereIn('placa_id', $candidatos)->orderBy('id', 'asc')->get();
                     }
                 }
-            } elseif (str_contains($estadoRaw, 'GARANT')) {
-                $fallaCondicion = 'GARANTÍA';
+
+                if ($equipos->isNotEmpty()) {
+                    $listaInterv = [];
+                    foreach ($equipos as $eq) {
+                        $partes = [];
+                        $tipo = trim((string)$eq->tipo_gestion);
+                        $estadoAct = trim((string)$eq->estado_actual);
+
+                        if (strcasecmp($tipo, 'Intervencion') === 0 || strcasecmp($tipo, 'Intervención') === 0) {
+                            $comp = $eq->que_va_intervenir ?: 'Intervención Técnica';
+                            if (!empty($eq->origen_pieza)) {
+                                $comp .= " ({$eq->origen_pieza})";
+                            }
+                            $partes[] = "Intervención: {$comp}";
+                        } elseif (strcasecmp($tipo, 'Baja') === 0) {
+                            $partes[] = 'Baja' . (!empty($eq->motivo_baja) ? ": {$eq->motivo_baja}" : '');
+                        } elseif (strcasecmp($tipo, 'Diagnostico') === 0 || strcasecmp($tipo, 'Diagnóstico') === 0) {
+                            $partes[] = 'Diagnóstico: ' . ($estadoAct ?: 'Funcional');
+                        } elseif (strcasecmp($tipo, 'Novedad') === 0) {
+                            $partes[] = 'Novedad: ' . ($eq->descripcion_novedad ?: ($estadoAct ?: 'Reportada'));
+                        } elseif (strcasecmp($tipo, 'IT') === 0) {
+                            $partes[] = 'Gestión IT: ' . ($eq->novedad_it ?: 'IT');
+                        } else {
+                            $partes[] = $tipo ?: 'Diagnóstico CPU';
+                            if (!empty($eq->que_va_intervenir)) {
+                                $comp = $eq->que_va_intervenir . (!empty($eq->origen_pieza) ? " ({$eq->origen_pieza})" : '');
+                                $partes[] = $comp;
+                            }
+                        }
+
+                        if (!empty($estadoAct) && !in_array(strtolower($tipo), ['diagnostico', 'diagnóstico', 'baja'])) {
+                            $partes[] = "Estado: {$estadoAct}";
+                        }
+                        if (!empty($eq->descripcion_novedad) && strcasecmp($tipo, 'Novedad') !== 0) {
+                            $partes[] = "Obs: {$eq->descripcion_novedad}";
+                        }
+                        if (!empty($eq->solucion_garantias)) {
+                            $partes[] = "Garantía: {$eq->solucion_garantias}";
+                        }
+                        if (!empty($eq->novedad_it) && strcasecmp($tipo, 'IT') !== 0) {
+                            $partes[] = "IT: {$eq->novedad_it}";
+                        }
+                        if (!empty($eq->ubicacion_destino)) {
+                            $partes[] = "Destino: {$eq->ubicacion_destino}";
+                        }
+
+                        $itemStr = implode(' | ', $partes);
+                        if ($equipos->count() > 1 && $eq->fecha_creacion) {
+                            $itemStr .= ' [' . Carbon::parse($eq->fecha_creacion)->format('d/m/Y') . ']';
+                        }
+                        $listaInterv[] = $itemStr;
+                    }
+
+                    $intervencionRealizada = implode(' // ', $listaInterv);
+
+                    $ultimoEquipo = $equipos->sortByDesc('id')->first();
+                    $estFinal = strtoupper(trim((string)$ultimoEquipo->estado_actual));
+                    $tipoFinal = strtoupper(trim((string)$ultimoEquipo->tipo_gestion));
+
+                    if ($tipoFinal === 'BAJA' || $estFinal === 'BAJA') {
+                        $fallaCondicion = 'BAJA' . ($ultimoEquipo->motivo_baja ? " ({$ultimoEquipo->motivo_baja})" : '');
+                    } elseif (str_contains($estFinal, 'GARANT')) {
+                        $fallaCondicion = 'GARANTÍA';
+                    } elseif (str_contains($estFinal, 'PENDIENTE')) {
+                        $fallaCondicion = 'PENDIENTE REPUESTO';
+                    } elseif (str_contains($estFinal, 'FUNCIONAL')) {
+                        $fallaCondicion = 'FUNCIONAL';
+                    } elseif ($tipoFinal === 'NOVEDAD') {
+                        $fallaCondicion = 'NOVEDAD' . ($ultimoEquipo->descripcion_novedad ? ": {$ultimoEquipo->descripcion_novedad}" : '');
+                    } elseif (!empty($estFinal)) {
+                        $fallaCondicion = $estFinal;
+                    } else {
+                        $fallaCondicion = 'FUNCIONAL';
+                    }
+                }
+            }
+
+            // 2. Diagnóstico Portátiles / Garantías
+            if (empty($intervencionRealizada) && (str_contains($moduloRaw, 'portat') || str_contains($moduloRaw, 'laptop') || str_contains($moduloRaw, 'garant') || ($row->garantiasPortatiles && $row->garantiasPortatiles->isNotEmpty()))) {
+                $garantias = $row->garantiasPortatiles ?? collect();
+                if ($garantias->isEmpty()) {
+                    $candidatosPort = array_unique(array_filter([
+                        $row->placa_id,
+                        $row->serial,
+                        $row->identificador_1,
+                        $row->identificador_2
+                    ]));
+                    if (!empty($candidatosPort)) {
+                        $garantias = \App\Models\GarantiaPortatil::whereIn('placa_id_equipo', $candidatosPort)->orderBy('id', 'asc')->get();
+                    }
+                }
+
+                if ($garantias->isNotEmpty()) {
+                    $listaPort = [];
+                    foreach ($garantias as $g) {
+                        $pG = [];
+                        $tipoG = trim((string)$g->tipo_gestion);
+                        if (!empty($tipoG)) {
+                            $pG[] = $tipoG;
+                        }
+
+                        if (!empty($g->pieza_intervenida)) {
+                            $pz = $g->pieza_intervenida;
+                            if (!empty($g->origen_pieza)) { $pz .= " ({$g->origen_pieza})"; }
+                            if (!empty($g->indique_fru)) { $pz .= " [FRU: {$g->indique_fru}]"; }
+                            $pG[] = "Pieza: {$pz}";
+                        } elseif (!empty($g->indique_pieza)) {
+                            $pz = $g->indique_pieza;
+                            if (!empty($g->indique_fru)) { $pz .= " [FRU: {$g->indique_fru}]"; }
+                            $pG[] = "Pieza: {$pz}";
+                        }
+
+                        if (!empty($g->diagnostico_laptop_intervenido)) {
+                            $pG[] = "Diag: {$g->diagnostico_laptop_intervenido}";
+                        }
+                        if (!empty($g->motivo_baja)) {
+                            $pG[] = "Baja: {$g->motivo_baja}";
+                        }
+                        if (!empty($g->numero_ticket)) {
+                            $pG[] = "Ticket: {$g->numero_ticket}";
+                        }
+
+                        $itemG = implode(' | ', $pG);
+                        if ($garantias->count() > 1 && $g->created_at) {
+                            $itemG .= ' [' . Carbon::parse($g->created_at)->format('d/m/Y') . ']';
+                        }
+                        $listaPort[] = $itemG;
+                    }
+
+                    $intervencionRealizada = implode(' // ', $listaPort);
+
+                    $ultimaG = $garantias->sortByDesc('id')->first();
+                    $estActG = strtoupper(trim((string)$ultimaG->estado_actual_equipo));
+                    $garG = strtoupper(trim((string)$ultimaG->garantia));
+                    $estFinG = strtoupper(trim((string)$ultimaG->estado_final_equipo));
+
+                    if (str_contains($estActG, 'GARANT') || str_contains($garG, 'APLICA') || str_contains($garG, 'GARANT')) {
+                        $fallaCondicion = 'GARANTÍA';
+                    } elseif (str_contains($estActG, 'BAJA') || str_contains($estFinG, 'BAJA') || !empty($ultimaG->motivo_baja)) {
+                        $fallaCondicion = 'BAJA' . ($ultimaG->motivo_baja ? " ({$ultimaG->motivo_baja})" : '');
+                    } elseif (str_contains($estActG, 'PENDIENTE') || str_contains($estFinG, 'PENDIENTE')) {
+                        $fallaCondicion = 'PENDIENTE REPUESTO';
+                    } elseif (str_contains($estActG, 'FUNCIONAL') || str_contains($estFinG, 'FUNCIONAL')) {
+                        $fallaCondicion = 'FUNCIONAL';
+                    } elseif (!empty($estActG)) {
+                        $fallaCondicion = $estActG;
+                    } else {
+                        $fallaCondicion = 'REVISADO';
+                    }
+                }
+            }
+
+            // 3. Soplado
+            if (empty($intervencionRealizada) && str_contains($moduloRaw, 'sopla')) {
+                $fallaCondicion = 'COMPLETADO';
+                $intervencionRealizada = 'Mantenimiento preventivo, limpieza y soplado';
+            }
+
+            // 4. Fallback general para otros casos
+            if (empty($fallaCondicion)) {
+                $fallaCondicion = $row->observaciones ?? ($row->estado ?? 'N/A');
+                $estadoRaw = strtoupper(trim((string)$row->estado));
+                if (in_array($estadoRaw, ['BAJA', 'DADO DE BAJA', 'DESCARTE', 'SCRAP'])) {
+                    $fallaCondicion = 'BAJA';
+                } elseif (in_array($estadoRaw, ['1', 'INTERVENIDO', 'CARGADO'])) {
+                    $fallaCondicion = 'INTERVENIDO';
+                }
+            }
+
+            if (empty($intervencionRealizada)) {
+                $intervencionRealizada = $row->observaciones ?: 'Intervención registrada en sistema';
             }
 
             return [
@@ -171,6 +373,7 @@ class DashboardController extends Controller
                 $row->marca ?: 'N/A',
                 $row->modelo ?: 'N/A',
                 $fallaCondicion,
+                $intervencionRealizada,
                 $traslado ?: ($row->num_traslado ?: 'N/A'),
                 $row->analista_intervencion ?: 'N/A',
                 $fechaStr

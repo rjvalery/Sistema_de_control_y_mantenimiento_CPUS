@@ -51,7 +51,23 @@ class EquiposController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes permisos para guardar diagnósticos de CPU.');
         }
 
-        $placaFinal = $request->placa_id ?? $request->placa;
+        $placaFinal = trim((string)($request->placa_id ?? $request->placa));
+        $serialFinal = trim((string)$request->serial);
+
+        // Resolver serial o placa si uno de ellos falta
+        if (!empty($placaFinal)) {
+            $inv = \App\Models\InventarioGeneral::buscarPorTermino($placaFinal);
+            if ($inv) {
+                if (empty($serialFinal)) {
+                    $serialFinal = $inv->serial ?: ($inv->identificador_2 ?: null);
+                }
+                // Si el analista ingresó el serial en el campo de placa y existe la placa real en inventario
+                if (strcasecmp($inv->serial, $placaFinal) === 0 && !empty($inv->placa_id)) {
+                    $placaFinal = $inv->placa_id;
+                }
+            }
+        }
+
         $nombreArchivo = UploadService::procesarSubidaFisica($request, 'diagnostico', $placaFinal);
 
         $user = auth()->user();
@@ -72,12 +88,13 @@ class EquiposController extends Controller
         $origenPieza = ($request->tipo_gestion === 'Intervencion') ? $request->origen_pieza : null;
 
         try {
-            DB::transaction(function () use ($request, $nombreArchivo, $nombreAnalista, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir, $placaFinal, $origenPieza) {
+            DB::transaction(function () use ($request, $nombreArchivo, $nombreAnalista, $descripcionNovedad, $novedadIt, $solucionGarantias, $timestampRegistro, $queVaIntervenir, $placaFinal, $serialFinal, $origenPieza) {
                 $equipo = Equipo::create([
                     'timestamp_registro'  => $timestampRegistro,
                     'nombre_analista'     => $nombreAnalista,
                     'num_traslado'        => $request->num_traslado,
                     'placa_id'            => $placaFinal,
+                    'serial'              => $serialFinal ?: null,
                     'tipo_gestion'        => $request->tipo_gestion,
                     'energiza'            => $request->energiza,
                     'da_video'            => $request->da_video,
@@ -98,7 +115,8 @@ class EquiposController extends Controller
                     $placaFinal,
                     'Diagnóstico CPU',
                     $nombreAnalista,
-                    $request->num_traslado
+                    $request->num_traslado,
+                    $serialFinal
                 );
             });
 

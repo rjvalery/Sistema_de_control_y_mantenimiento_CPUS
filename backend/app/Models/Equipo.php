@@ -18,6 +18,7 @@ class Equipo extends Model
         'nombre_analista',
         'num_traslado',
         'placa_id',
+        'serial',
         'tipo_gestion',
         'energiza',
         'da_video',

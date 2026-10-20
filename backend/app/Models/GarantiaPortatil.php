@@ -17,6 +17,7 @@ class GarantiaPortatil extends Model
         'nombre_analista',
         'numero_traslado',
         'placa_id_equipo',
+        'serial',
         'tipo_gestion',
         'energiza',
         'da_video',

@@ -146,6 +146,10 @@ async function enviarFormulario() {
     const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
     formData.set('placa_id', placaVal);
+    const inputSerialEl = document.getElementById('serial');
+    if (inputSerialEl && inputSerialEl.value) {
+        formData.set('serial', inputSerialEl.value.trim());
+    }
     const tokenInput = document.querySelector('input[name="_token"]');
     const tokenMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
@@ -219,7 +223,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (formSoplado) {
         formSoplado.addEventListener('reset', function() {
-            setTimeout(toggleGelCucarachas, 0);
+            setTimeout(function() {
+                toggleGelCucarachas();
+                const inputSerial = document.getElementById('serial');
+                if (inputSerial) inputSerial.value = '';
+            }, 0);
         });
     }
 
@@ -243,6 +251,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (val.length < 3) {
                 if (feedbackDiv) feedbackDiv.innerHTML = '';
                 if (spinnerPlaca) spinnerPlaca.classList.add('d-none');
+                const inputSerial = document.getElementById('serial');
+                if (inputSerial) inputSerial.value = '';
                 if (inputTraslado && inputTraslado.dataset.autofilled === 'true' && inputTraslado.dataset.manual !== 'true') {
                     inputTraslado.value = '';
                     inputTraslado.dataset.autofilled = 'false';
@@ -261,6 +271,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         if (res.encontrado && res.equipo) {
                             const eq = res.equipo;
+                            const inputSerial = document.getElementById('serial');
+                            if (inputSerial && eq.serial) {
+                                inputSerial.value = eq.serial;
+                            }
 
                             if (inputTraslado && inputTraslado.dataset.manual !== 'true' && eq.num_traslado) {
                                 inputTraslado.value = eq.num_traslado;
@@ -319,6 +333,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 `;
                             }
                         } else {
+                            const inputSerial = document.getElementById('serial');
+                            if (inputSerial) inputSerial.value = '';
                             feedbackDiv.innerHTML = `
                                 <div class="alert alert-light border py-1 px-2 mb-0 small text-muted">
                                     <i class="fa-solid fa-info-circle me-1 text-secondary"></i> No registrado en cargue masivo previo. Se registrará como equipo nuevo.

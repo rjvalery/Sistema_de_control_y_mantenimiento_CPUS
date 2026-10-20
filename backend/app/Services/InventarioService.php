@@ -20,18 +20,28 @@ class InventarioService
      * @param string|null $numTraslado Número de traslado ingresado en la bitácora.
      * @return void
      */
-    public function marcarComoIntervenido(string $placaId, string $modulo, string $nombreAnalista, ?string $numTraslado = null): void
+    public function marcarComoIntervenido(string $placaId, string $modulo, string $nombreAnalista, ?string $numTraslado = null, ?string $serial = null): void
     {
         $placaLimpia = trim($placaId);
-        if ($placaLimpia === '') {
+        $serialLimpio = $serial ? trim($serial) : null;
+        if ($placaLimpia === '' && empty($serialLimpio)) {
             return;
         }
 
-        $registros = InventarioGeneral::where('identificador_1', $placaLimpia)
-            ->orWhere('identificador_2', $placaLimpia)
-            ->orWhere('placa_id', $placaLimpia)
-            ->orWhere('serial', $placaLimpia)
-            ->get();
+        $query = InventarioGeneral::where(function($q) use ($placaLimpia, $serialLimpio) {
+            if ($placaLimpia !== '') {
+                $q->where('identificador_1', $placaLimpia)
+                  ->orWhere('identificador_2', $placaLimpia)
+                  ->orWhere('placa_id', $placaLimpia)
+                  ->orWhere('serial', $placaLimpia);
+            }
+            if ($serialLimpio) {
+                $q->orWhere('identificador_2', $serialLimpio)
+                  ->orWhere('serial', $serialLimpio);
+            }
+        });
+
+        $registros = $query->get();
 
         if ($registros->isNotEmpty()) {
             foreach ($registros as $reg) {
@@ -42,15 +52,22 @@ class InventarioService
                 if (!empty($numTraslado) && (empty($reg->num_traslado) || $reg->num_traslado === 'Sin Traslado')) {
                     $reg->num_traslado = $numTraslado;
                 }
+                if (!empty($serialLimpio) && empty($reg->serial)) {
+                    $reg->serial = $serialLimpio;
+                    $reg->identificador_2 = $serialLimpio;
+                }
                 $reg->save();
             }
         } else {
             // Auto-incorporar equipo huérfano para garantizar trazabilidad 100% en Inventario General
+            $serialFinal = $serialLimpio ?: $placaLimpia;
+            $placaFinal = $placaLimpia ?: $serialFinal;
+
             InventarioGeneral::create([
-                'identificador_1'       => $placaLimpia,
-                'identificador_2'       => $placaLimpia,
-                'placa_id'              => $placaLimpia,
-                'serial'                => $placaLimpia,
+                'identificador_1'       => $placaFinal,
+                'identificador_2'       => $serialFinal,
+                'placa_id'              => $placaFinal,
+                'serial'                => $serialFinal,
                 'num_traslado'          => $numTraslado ?: 'Registro Mesa',
                 'tipo_equipo'           => ($modulo === 'Diagnóstico CPU' ? 'CPU' : ($modulo === 'Diagnóstico Portátiles' ? 'PORTATIL' : 'Equipo')),
                 'descripcion'           => $modulo,
