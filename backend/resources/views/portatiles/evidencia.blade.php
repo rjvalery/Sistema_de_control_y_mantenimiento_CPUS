@@ -52,6 +52,7 @@
                                 <input type="text" name="placa_id_equipo" id="placa_id_equipo" class="form-control form-control-lg fw-bold" 
                                        placeholder="Ej: L123456 o Serial de la laptop" 
                                        value="{{ $placaInicial ?? '' }}" required autocomplete="off">
+                                <input type="hidden" name="serial" id="serial" value="">
                                 <span class="input-group-text d-none" id="spinner_placa">
                                     <i class="fa-solid fa-spinner fa-spin text-primary"></i>
                                 </span>
@@ -82,14 +83,14 @@
                         <!-- Área de Captura de Fotografía -->
                         <div class="col-12 mt-3">
                             <label class="form-label fw-bold">
-                                <i class="fa-solid fa-camera me-1 text-primary"></i> Fotografía del Portátil *
+                                <i class="fa-solid fa-camera me-1 text-primary"></i> Fotografía del Portátil <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">(Opcional)</span>
                             </label>
 
                             <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">
-                                <!-- Input principal que valida el formulario y asegura la carga -->
+                                <!-- Input principal para la carga de fotografía -->
                                 <input type="file" name="foto_equipo" id="foto_equipo" 
                                        style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden;" 
-                                       accept="image/*" required>
+                                       accept="image/*">
 
                                 <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
                                     <!-- Botón Cámara -->
@@ -307,12 +308,7 @@ function mostrarModal(icono, titulo, mensaje) {
 async function enviarEvidencia() {
     const form = document.getElementById('formEvidenciaPortatil');
     if (!form.checkValidity()) {
-        const principal = document.getElementById('foto_equipo');
-        if (principal && principal.required && !principal.value) {
-            mostrarModal('<i class="fa-solid fa-triangle-exclamation text-warning"></i>', 'Falta la Foto', 'Por favor selecciona o toma una foto del portátil antes de guardar.');
-        } else {
-            form.reportValidity();
-        }
+        form.reportValidity();
         return;
     }
 
@@ -330,6 +326,11 @@ async function enviarEvidencia() {
     const placaInputEl = document.getElementById('placa_id_equipo');
     const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
     formData.set('placa', placaVal);
+
+    const serialInputEl = document.getElementById('serial');
+    if (serialInputEl && serialInputEl.value) {
+        formData.set('serial', serialInputEl.value.trim());
+    }
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
@@ -356,14 +357,14 @@ async function enviarEvidencia() {
         if (data.status === 'success') {
             mostrarModal(
                 '<i class="fa-solid fa-circle-check text-success"></i>', 
-                '¡Evidencia Guardada!', 
-                `La fotografía del equipo <strong>${escapeHtml(data.placa_id || '')}</strong> se subió correctamente.`
+                '¡Guardado con Éxito!', 
+                data.message || `La evidencia del equipo <strong>${escapeHtml(data.placa_id || '')}</strong> se procesó correctamente.`
             );
             form.reset();
             fotoOptimBlob = null;
             optimizacionPromesa = null;
             const principal = document.getElementById('foto_equipo');
-            if (principal) principal.required = true;
+            if (principal) { principal.value = ''; }
             document.getElementById('preview-container').classList.add('d-none');
             document.getElementById('upload-label').innerText = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
             const feedbackDiv = document.getElementById('laptop_feedback');
@@ -404,9 +405,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (spinnerPlaca) spinnerPlaca.classList.add('d-none');
                 if (!feedbackDiv) return;
 
+                if (res.serial) {
+                    const inputSerial = document.getElementById('serial');
+                    if (inputSerial) inputSerial.value = res.serial;
+                }
+
                 if (res.diagnostico) {
                     const diag = res.diagnostico;
                     const tieneFoto = res.tiene_foto;
+                    const inputSerial = document.getElementById('serial');
+                    if (inputSerial && diag.serial) inputSerial.value = diag.serial;
+
                     feedbackDiv.innerHTML = `
                         <div class="alert alert-success py-2 px-3 mb-0 small border-success shadow-sm">
                             <div class="d-flex align-items-center mb-1">
@@ -415,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="text-dark">
                                 <strong>Placa:</strong> <code>${escapeHtml(diag.placa_id_equipo || '')}</code> | 
+                                <strong>Serial:</strong> <code>${escapeHtml(diag.serial || 'N/A')}</code> | 
                                 <strong>Gestión:</strong> ${escapeHtml(diag.tipo_gestion || '')} | 
                                 <strong>Analista:</strong> ${escapeHtml(diag.nombre_analista || '')}
                             </div>
@@ -425,6 +435,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                 } else if (res.inventario) {
                     const inv = res.inventario;
+                    const inputSerial = document.getElementById('serial');
+                    if (inputSerial && inv.serial) inputSerial.value = inv.serial;
+
                     feedbackDiv.innerHTML = `
                         <div class="alert alert-info py-2 px-3 mb-0 small border-info shadow-sm">
                             <div class="d-flex align-items-center mb-1">
@@ -432,6 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <strong>Equipo encontrado en Inventario General</strong>
                             </div>
                             <div class="text-dark">
+                                <strong>Placa:</strong> <code>${escapeHtml(inv.placa_id || '')}</code> | 
                                 <strong>Serial:</strong> <code>${escapeHtml(inv.serial || '')}</code> | 
                                 <strong>Equipo:</strong> ${escapeHtml(inv.marca || '')} ${escapeHtml(inv.modelo || '')}
                             </div>

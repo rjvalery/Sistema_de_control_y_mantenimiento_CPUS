@@ -1,3 +1,84 @@
+let fotoOptimBlob = null;
+let optimizacionPromesa = null;
+
+function manejarSeleccionFotoPortatil(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const principal = document.getElementById('foto_equipo');
+    if (principal) {
+        principal.required = false;
+        try {
+            if (window.DataTransfer) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                principal.files = dt.files;
+            }
+        } catch (e) {}
+    }
+    optimizarImagenPortatil(file);
+    input.value = '';
+}
+
+function optimizarImagenPortatil(file) {
+    const previewContainer = document.getElementById('preview-container');
+    const preview = document.getElementById('preview');
+    const uploadLabel = document.getElementById('upload-label');
+
+    if (!file) {
+        fotoOptimBlob = null;
+        optimizacionPromesa = null;
+        return;
+    }
+
+    const instantUrl = URL.createObjectURL(file);
+    if (preview) preview.src = instantUrl;
+    if (previewContainer) previewContainer.classList.remove('d-none');
+    if (uploadLabel) uploadLabel.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Optimizando peso...';
+
+    optimizacionPromesa = (async () => {
+        try {
+            const maxDim = 1000;
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            let procesado = false;
+
+            if ('createImageBitmap' in window) {
+                try {
+                    const bitmap = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' });
+                    canvas.width = bitmap.width; canvas.height = bitmap.height;
+                    ctx.drawImage(bitmap, 0, 0);
+                    bitmap.close(); procesado = true;
+                } catch (e) {}
+            }
+
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.65));
+            if (blob && procesado) {
+                fotoOptimBlob = blob;
+                if (uploadLabel) uploadLabel.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista (${(blob.size / 1024).toFixed(0)} KB)`;
+            } else {
+                fotoOptimBlob = file;
+                if (uploadLabel) uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto cargada.';
+            }
+        } catch (err) {
+            fotoOptimBlob = file;
+        }
+        return fotoOptimBlob;
+    })();
+}
+
+function limpiarPrevisualizacion() {
+    fotoOptimBlob = null;
+    optimizacionPromesa = null;
+    const principal = document.getElementById('foto_equipo');
+    if (principal) { principal.value = ''; principal.required = false; }
+    const previewContainer = document.getElementById('preview-container');
+    const preview = document.getElementById('preview');
+    const uploadLabel = document.getElementById('upload-label');
+    if (previewContainer) previewContainer.classList.add('d-none');
+    if (preview) preview.src = '#';
+    if (uploadLabel) uploadLabel.innerText = 'Toca un botón para activar la cámara o seleccionar de la galería.';
+}
+
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/[&<>"']/g, function(m) {
@@ -206,7 +287,7 @@ function resetContenedorPiezas() {
     actualizarBotonesEliminarPieza();
 }
 
-function enviarFormulario() {
+async function enviarFormulario() {
     const form = document.getElementById('formPortatiles');
     if (!form.checkValidity()) {
         form.reportValidity();
@@ -217,6 +298,12 @@ function enviarFormulario() {
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando diagnóstico...';
 
+    if (optimizacionPromesa) {
+        try {
+            await optimizacionPromesa;
+        } catch (e) {}
+    }
+
     const formData = new FormData(form);
     const placaInputEl = document.getElementById('placa_id_equipo');
     const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
@@ -226,6 +313,13 @@ function enviarFormulario() {
     if (inputSerialEl && inputSerialEl.value) {
         formData.set('serial', inputSerialEl.value.trim());
     }
+
+    if (fotoOptimBlob) {
+        formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
+        formData.set('evidencia', fotoOptimBlob, 'evidencia_laptop.jpg');
+        formData.set('foto', fotoOptimBlob, 'evidencia_laptop.jpg');
+    }
+
     const tokenInput = document.querySelector('input[name="_token"]');
     const tokenMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
@@ -262,6 +356,7 @@ function enviarFormulario() {
                 false
             );
             form.reset();
+            limpiarPrevisualizacion();
             evaluarEstadoEquipo('');
             resetContenedorPiezas();
             const feedbackDiv = document.getElementById('inventario_feedback');

@@ -1,8 +1,9 @@
-@props(['name' => 'evidencia', 'label' => 'Evidencia Fotográfica', 'onChange' => 'manejarSeleccionFoto'])
+@props(['name' => 'evidencia', 'label' => 'Evidencia Fotográfica', 'onChange' => 'manejarSeleccionFoto', 'required' => true])
 
 <div class="col-12">
     <label class="form-label fw-bold" id="lbl_evidencia">
-        <i class="fa-solid fa-camera me-1 text-primary"></i> {{ $label }} <span id="foto_asterisco" class="text-danger">*</span>
+        <i class="fa-solid fa-camera me-1 text-primary"></i> {{ $label }} 
+        <span id="foto_asterisco" class="{{ $required ? 'text-danger' : 'badge bg-secondary-subtle text-secondary fw-normal ms-1' }}">{{ $required ? '*' : '(Opcional)' }}</span>
     </label>
     
     <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">

@@ -56,12 +56,37 @@ class PortatilesController extends Controller
 
     public function ultimoRegistro(Request $request)
     {
-        $placa = $request->query('placa');
-        if (!$placa) {
+        $termino = trim((string)$request->query('placa'));
+        if (!$termino) {
             return response()->json(null);
         }
 
-        return response()->json(\App\Services\TrazabilidadService::obtenerUltimoRegistro($placa, 'portatiles'));
+        // 1. Buscar diagnóstico en GarantiaPortatil por placa o por serial
+        $diag = GarantiaPortatil::where('placa_id_equipo', $termino)
+                    ->orWhere('serial', $termino)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+        // 2. Si no se encuentra, cruzar con InventarioGeneral
+        $inv = \App\Models\InventarioGeneral::buscarPorTermino($termino);
+        if (!$diag && $inv) {
+            $placaReal = $inv->placa_id;
+            $serialReal = $inv->serial ?: ($inv->identificador_2 ?: null);
+            $diag = GarantiaPortatil::where(function ($q) use ($placaReal, $serialReal) {
+                        if (!empty($placaReal)) $q->where('placa_id_equipo', $placaReal);
+                        if (!empty($serialReal)) $q->orWhere('serial', $serialReal);
+                    })
+                    ->orderBy('id', 'desc')
+                    ->first();
+        }
+
+        return response()->json([
+            'diagnostico' => $diag,
+            'tiene_foto'  => !empty($diag?->foto_ruta),
+            'inventario'  => $inv,
+            'placa_id'    => $diag?->placa_id_equipo ?: ($inv?->placa_id ?: $termino),
+            'serial'      => $diag?->serial ?: ($inv?->serial ?: ($inv?->identificador_2 ?: null)),
+        ]);
     }
 
     public function evidencia(Request $request)
@@ -75,39 +100,91 @@ class PortatilesController extends Controller
     {
         $request->validate([
             'placa_id_equipo' => 'required|string',
-            'foto_equipo' => 'nullable|image|max:10240',
-            'evidencia' => 'nullable|image|max:10240',
-            'foto' => 'nullable|image|max:10240',
+            'foto_equipo'     => 'nullable|image|max:10240',
+            'evidencia'       => 'nullable|image|max:10240',
+            'foto'            => 'nullable|image|max:10240',
         ]);
 
-        $placa = $request->placa_id_equipo ?? $request->placa;
-        
-        $registro = GarantiaPortatil::where('placa_id_equipo', $placa)
-                        ->orderBy('id', 'desc')
-                        ->first();
+        $termino = trim((string)($request->placa_id_equipo ?? $request->placa));
+        $serialFinal = trim((string)$request->serial);
+        $placaFinal = $termino;
 
-        if (!$registro) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No se encontró registro para la placa indicada. Por favor registre primero el diagnóstico.'
-            ], 404);
+        // 1. Resolver término cruzando con Inventario General (por si es placa o serial)
+        $inv = \App\Models\InventarioGeneral::buscarPorTermino($termino);
+        if ($inv) {
+            if (empty($serialFinal)) {
+                $serialFinal = $inv->serial ?: ($inv->identificador_2 ?: null);
+            }
+            if (strcasecmp($inv->serial, $termino) === 0 && !empty($inv->placa_id)) {
+                $placaFinal = $inv->placa_id;
+            } elseif (empty($placaFinal) && !empty($inv->placa_id)) {
+                $placaFinal = $inv->placa_id;
+            }
         }
 
-        $fotoRuta = UploadService::procesarSubidaFisica($request, 'portatiles', $placa);
-        if ($fotoRuta) {
-            $registro->foto_ruta = $fotoRuta;
+        // 2. Buscar si ya existe diagnóstico en GarantiaPortatil por placa, serial o término
+        $registro = GarantiaPortatil::where(function ($q) use ($termino, $placaFinal, $serialFinal) {
+                        $q->where('placa_id_equipo', $termino)
+                          ->orWhere('placa_id_equipo', $placaFinal)
+                          ->orWhere('serial', $termino);
+                        if (!empty($serialFinal)) {
+                            $q->orWhere('serial', $serialFinal);
+                        }
+                    })
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+        $fotoRuta = UploadService::procesarSubidaFisica($request, 'portatiles', $placaFinal);
+
+        // 3. Si ya existe un registro previo, actualizarlo con la foto y asegurar su serial
+        if ($registro) {
+            if ($fotoRuta) {
+                $registro->foto_ruta = $fotoRuta;
+            }
+            if (empty($registro->serial) && !empty($serialFinal)) {
+                $registro->serial = $serialFinal;
+            }
             $registro->save();
 
             return response()->json([
-                'status' => 'success',
-                'message' => 'Evidencia guardada y enlazada correctamente.'
+                'status'   => 'success',
+                'placa_id' => $registro->placa_id_equipo,
+                'message'  => $fotoRuta 
+                    ? 'Evidencia guardada y enlazada correctamente.' 
+                    : 'Registro verificado correctamente (sin foto adjunta).'
             ]);
         }
 
+        // 4. Si NO existe diagnóstico previo, crearlo automáticamente para no bloquear al analista
+        $user = auth()->user();
+        $nombreAnalista = ($user && $user->rol === 'analista') 
+            ? $user->nombre 
+            : ($request->nombre_analista ?: ($user->nombre ?? 'Sistema'));
+
+        $numeroTraslado = $inv ? ($inv->num_traslado ?: 'S/N') : 'S/N';
+
+        GarantiaPortatil::create([
+            'nombre_analista'                => $nombreAnalista,
+            'numero_traslado'                => $numeroTraslado,
+            'placa_id_equipo'                => $placaFinal,
+            'serial'                         => $serialFinal ?: null,
+            'tipo_gestion'                   => 'Diagnostico',
+            'energiza'                       => 'Si',
+            'da_video'                       => 'Si',
+            'realizo_test_lenovo'            => 'No',
+            'estado_actual_equipo'           => 'Pendiente diagnóstico',
+            'diagnostico_laptop_intervenido' => 'Evidencia fotográfica inicial registrada',
+            'foto_ruta'                      => $fotoRuta,
+            'created_at'                     => now(),
+        ]);
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'No se recibió ninguna imagen válida.'
-        ], 400);
+            'status'   => 'success',
+            'placa_id' => $placaFinal,
+            'message'  => $fotoRuta 
+                ? 'Evidencia guardada y nuevo registro creado exitosamente.' 
+                : 'Registro creado correctamente (sin foto adjunta).'
+        ]);
     }
 
     public function store(StorePortatilRequest $request)

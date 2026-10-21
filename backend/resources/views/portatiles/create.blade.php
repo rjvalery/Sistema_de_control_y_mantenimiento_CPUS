@@ -250,7 +250,8 @@
                         </div>
 
 
-                        <!-- La evidencia fotográfica ha sido movida a un módulo independiente accesible desde el menú principal -->
+                        <!-- Evidencia Fotográfica Opcional Directa -->
+                        <x-captura-evidencia name="foto_equipo" label="Evidencia Fotográfica" on-change="manejarSeleccionFotoPortatil" :required="false" />
 
                         <div class="col-12 mt-4">
                             <button type="button" class="btn btn-primary w-100 py-2 fs-6 fw-bold" id="btnGuardar" onclick="enviarFormulario()">
@@ -268,12 +269,12 @@
 <x-modal-emergente id="modalEmergente">
     <!-- Botones para estado de éxito -->
     <div id="modalBotonesExito" class="d-grid gap-2">
-        <a id="btnIrEvidencia" href="{{ route('portatiles.evidencia') }}" class="btn btn-warning fw-bold py-2 shadow-sm">
-            <i class="fa-solid fa-camera me-1"></i> Subir Evidencia Fotográfica Ahora
-        </a>
-        <button type="button" class="btn btn-outline-secondary py-2" data-bs-dismiss="modal">
-            Registrar Otra Laptop
+        <button type="button" class="btn btn-primary fw-bold py-2 shadow-sm" data-bs-dismiss="modal">
+            <i class="fa-solid fa-plus me-1"></i> Registrar Otra Laptop
         </button>
+        <a id="btnIrEvidencia" href="{{ route('portatiles.evidencia') }}" class="btn btn-outline-secondary py-2 small">
+            <i class="fa-solid fa-camera me-1"></i> Subir Evidencia en Módulo Separado (Opcional)
+        </a>
     </div>
 
     <!-- Botones para estado de error -->

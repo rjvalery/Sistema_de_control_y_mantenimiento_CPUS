@@ -15,12 +15,13 @@ class TrazabilidadService
      */
     public static function obtenerUltimoRegistro(string $placa, string $modulo)
     {
+        $placa = trim($placa);
         if ($modulo === 'soplado') {
-            return SopladoRegistro::where('placa_id', $placa)->orderBy('id', 'desc')->first();
+            return SopladoRegistro::where('placa_id', $placa)->orWhere('serial', $placa)->orderBy('id', 'desc')->first();
         } elseif ($modulo === 'portatiles') {
-            return GarantiaPortatil::where('placa_id_equipo', $placa)->orderBy('id', 'desc')->first();
+            return GarantiaPortatil::where('placa_id_equipo', $placa)->orWhere('serial', $placa)->orderBy('id', 'desc')->first();
         } elseif ($modulo === 'equipos') {
-            return Equipo::where('placa_id', $placa)->orderBy('id', 'desc')->first();
+            return Equipo::where('placa_id', $placa)->orWhere('serial', $placa)->orderBy('id', 'desc')->first();
         }
         return null;
     }
