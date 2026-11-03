@@ -156,8 +156,8 @@ async function enviarFormulario() {
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'foto_evidencia.jpg');
-        formData.set('evidencia', fotoOptimBlob, 'foto_evidencia.jpg');
-        formData.set('foto', fotoOptimBlob, 'foto_evidencia.jpg');
+        formData.delete('evidencia');
+        formData.delete('foto');
     }
 
     fetch(window.AppUrls.guardarSoplado, {

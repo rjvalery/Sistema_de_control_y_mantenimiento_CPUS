@@ -206,8 +206,8 @@ async function enviarFormulario() {
 
     if (fotoOptimBlob) {
         formData.set('evidencia', fotoOptimBlob, 'foto_diagnostico.jpg');
-        formData.set('foto', fotoOptimBlob, 'foto_diagnostico.jpg');
-        formData.set('foto_equipo', fotoOptimBlob, 'foto_diagnostico.jpg');
+        formData.delete('foto');
+        formData.delete('foto_equipo');
     }
 
     fetch(window.AppUrls.guardarEquipo, {

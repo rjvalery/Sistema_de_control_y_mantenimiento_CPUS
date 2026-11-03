@@ -292,7 +292,8 @@
         buscarEquipo: '{{ route("inventario.buscar") }}',
         guardarPortatiles: '{{ route("portatiles.store") }}',
         evidenciaPortatiles: '{{ route("portatiles.evidencia") }}',
-        ultimoRegistro: '{{ route("portatiles.ultimo_registro") }}'
+        ultimoRegistro: '{{ route("portatiles.ultimo_registro") }}',
+        refreshCsrf: '{{ route("csrf.refresh") }}'
     };
 </script>
 <script src="{{ asset('assets/js/portatiles_formulario.js') }}?v={{ time() }}"></script>

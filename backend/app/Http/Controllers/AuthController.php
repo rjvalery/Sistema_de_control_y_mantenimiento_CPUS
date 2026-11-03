@@ -20,25 +20,51 @@ class AuthController extends Controller
     {
         $key = 'login_attempt_' . $request->ip();
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            return back()->withInput()->with('error', 'Demasiados intentos. Espera un momento.');
+        if (RateLimiter::tooManyAttempts($key, 10)) {
+            $seconds = RateLimiter::availableIn($key);
+            return back()->withInput()->with('error', "Demasiados intentos fallidos. Por favor espera {$seconds} segundos antes de intentar nuevamente.");
         }
 
-        $credentials = $request->only('usuario', 'password');
+        $usuarioInput = trim($request->input('usuario'));
+        $password = (string) $request->input('password');
 
-        $usuario = Usuario::where('usuario', $credentials['usuario'])->first();
+        // Búsqueda flexible: por usuario exacto, insensible a mayúsculas/minúsculas o por nombre completo
+        $usuario = Usuario::where('usuario', $usuarioInput)
+            ->orWhereRaw('LOWER(TRIM(usuario)) = ?', [strtolower($usuarioInput)])
+            ->orWhereRaw('LOWER(TRIM(nombre)) = ?', [strtolower($usuarioInput)])
+            ->first();
 
-        if ($usuario && Hash::check($credentials['password'], $usuario->password) && $usuario->activo) {
-            Auth::login($usuario);
-            RateLimiter::clear($key);
-            $request->session()->regenerate();
-            $request->session()->forget('url.intended');
-            return redirect()->route('dashboard');
+        if (!$usuario) {
+            RateLimiter::hit($key, 3 * 60);
+            return back()->withInput()->with('error', 'El usuario ingresado no existe en el sistema.');
         }
 
-        RateLimiter::hit($key, 5 * 60);
+        // Validación de contraseña con soporte para bcrypt y hashes legados si correspondiese
+        $passwordValida = false;
+        if (Hash::check($password, $usuario->password)) {
+            $passwordValida = true;
+        } elseif ($usuario->password === $password || $usuario->password === md5($password)) {
+            // Contraseña legada o sin hash: migrar automáticamente a bcrypt
+            $usuario->password = Hash::make($password);
+            $usuario->save();
+            $passwordValida = true;
+        }
 
-        return back()->withInput()->with('error', 'Credenciales inválidas.');
+        if (!$passwordValida) {
+            RateLimiter::hit($key, 3 * 60);
+            return back()->withInput()->with('error', 'Contraseña incorrecta. Por favor verifica tus credenciales.');
+        }
+
+        if (!$usuario->activo) {
+            return back()->withInput()->with('error', 'Tu usuario se encuentra inactivo. Comunícate con el administrador.');
+        }
+
+        Auth::login($usuario);
+        RateLimiter::clear($key);
+        $request->session()->regenerate();
+        $request->session()->forget('url.intended');
+
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request)

@@ -334,15 +334,21 @@ async function enviarEvidencia() {
 
     if (fotoOptimBlob) {
         formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
-        formData.set('evidencia', fotoOptimBlob, 'evidencia_laptop.jpg');
-        formData.set('foto', fotoOptimBlob, 'evidencia_laptop.jpg');
+        formData.delete('evidencia');
+        formData.delete('foto');
+        formData.delete('foto_ruta');
     }
+
+    const tokenInput = form.querySelector('input[name="_token"]');
+    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
 
     fetch('{{ route("portatiles.guardarEvidencia") }}', {
         method: 'POST',
         body: formData,
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken || ''
         }
     })
     .then(async r => {

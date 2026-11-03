@@ -37,24 +37,60 @@ function optimizarImagenPortatil(file) {
 
     optimizacionPromesa = (async () => {
         try {
-            const maxDim = 1000;
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let procesado = false;
+            const maxDim = 1200;
+            const blob = await new Promise((resolve) => {
+                // Si createImageBitmap está disponible
+                if ('createImageBitmap' in window) {
+                    createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' })
+                        .then(bitmap => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = bitmap.width;
+                            canvas.height = bitmap.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(bitmap, 0, 0);
+                            bitmap.close();
+                            canvas.toBlob(b => resolve(b || file), 'image/jpeg', 0.70);
+                        })
+                        .catch(() => fallbackConImage());
+                } else {
+                    fallbackConImage();
+                }
 
-            if ('createImageBitmap' in window) {
-                try {
-                    const bitmap = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' });
-                    canvas.width = bitmap.width; canvas.height = bitmap.height;
-                    ctx.drawImage(bitmap, 0, 0);
-                    bitmap.close(); procesado = true;
-                } catch (e) {}
-            }
+                function fallbackConImage() {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > maxDim || h > maxDim) {
+                                if (w > h) {
+                                    h = Math.round((h * maxDim) / w);
+                                    w = maxDim;
+                                } else {
+                                    w = Math.round((w * maxDim) / h);
+                                    h = maxDim;
+                                }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            canvas.toBlob(b => resolve(b || file), 'image/jpeg', 0.70);
+                        };
+                        img.onerror = () => resolve(file);
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => resolve(file);
+                    reader.readAsDataURL(file);
+                }
+            });
 
-            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.65));
-            if (blob && procesado) {
+            if (blob && blob.size > 0) {
                 fotoOptimBlob = blob;
-                if (uploadLabel) uploadLabel.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista (${(blob.size / 1024).toFixed(0)} KB)`;
+                const kb = (blob.size / 1024).toFixed(0);
+                if (uploadLabel) uploadLabel.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista (${kb} KB)`;
             } else {
                 fotoOptimBlob = file;
                 if (uploadLabel) uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto cargada.';
@@ -64,6 +100,37 @@ function optimizarImagenPortatil(file) {
         }
         return fotoOptimBlob;
     })();
+}
+
+// Actualiza el token CSRF en todos los elementos del formulario y meta tags
+async function refrescarTokenCsrf() {
+    if (!window.AppUrls || !window.AppUrls.refreshCsrf) return null;
+    try {
+        const res = await fetch(window.AppUrls.refreshCsrf, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.token) {
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) meta.setAttribute('content', data.token);
+                document.querySelectorAll('input[name="_token"]').forEach(input => {
+                    input.value = data.token;
+                });
+                return data.token;
+            }
+        }
+    } catch (e) {
+        console.warn('Heartbeat/Refresco CSRF no completado:', e);
+    }
+    return null;
+}
+
+// Mantiene viva la sesión de Laravel cada 10 minutos
+function iniciarHeartbeatSesion() {
+    setInterval(() => {
+        refrescarTokenCsrf();
+    }, 10 * 60 * 1000);
 }
 
 function limpiarPrevisualizacion() {
@@ -304,43 +371,75 @@ async function enviarFormulario() {
         } catch (e) {}
     }
 
-    const formData = new FormData(form);
     const placaInputEl = document.getElementById('placa_id_equipo');
     const placaVal = (placaInputEl && placaInputEl.value) ? placaInputEl.value.trim() : '';
-    formData.set('placa', placaVal);
-
     const inputSerialEl = document.getElementById('serial');
-    if (inputSerialEl && inputSerialEl.value) {
-        formData.set('serial', inputSerialEl.value.trim());
-    }
+    const serialVal = (inputSerialEl && inputSerialEl.value) ? inputSerialEl.value.trim() : '';
 
-    if (fotoOptimBlob) {
-        formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
-        formData.set('evidencia', fotoOptimBlob, 'evidencia_laptop.jpg');
-        formData.set('foto', fotoOptimBlob, 'evidencia_laptop.jpg');
-    }
-
-    const tokenInput = document.querySelector('input[name="_token"]');
-    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
-    const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
-
-    fetch(window.AppUrls.guardarPortatiles, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken
+    const ejecutarPeticion = async (intento = 1) => {
+        const formData = new FormData(form);
+        formData.set('placa', placaVal);
+        if (serialVal) {
+            formData.set('serial', serialVal);
         }
-    })
-    .then(async r => {
-        const text = await r.text();
+
+        // Adjuntar únicamente la foto optimizada sin duplicar claves en FormData
+        if (fotoOptimBlob) {
+            formData.set('foto_equipo', fotoOptimBlob, 'evidencia_laptop.jpg');
+            formData.delete('evidencia');
+            formData.delete('foto');
+            formData.delete('foto_ruta');
+        }
+
+        const tokenInput = form.querySelector('input[name="_token"]');
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = (tokenInput && tokenInput.value) ? tokenInput.value : (tokenMeta ? tokenMeta.getAttribute('content') : '');
+
+        if (csrfToken) {
+            formData.set('_token', csrfToken);
+        }
+
+        const response = await fetch(window.AppUrls.guardarPortatiles, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken || '',
+                'Accept': 'application/json'
+            }
+        });
+
+        // Si el servidor responde con 419 (CSRF Mismatch), renovar token y reintentar automáticamente
+        if (response.status === 419 && intento === 1) {
+            btnSubmit.innerHTML = '<i class="fa-solid fa-rotate fa-spin me-1"></i> Sincronizando sesión...';
+            const nuevoToken = await refrescarTokenCsrf();
+            if (nuevoToken) {
+                return ejecutarPeticion(2);
+            }
+        }
+
+        // Si la sesión ha caducado por completo (redirección a login o no autorizado)
+        if (response.status === 401 || (response.redirected && response.url.includes('/login'))) {
+            throw new Error('Tu sesión ha expirado por inactividad. Abre una pestaña nueva, inicia sesión y luego regresa aquí para pulsar "Guardar" sin perder tus datos.');
+        }
+
+        const text = await response.text();
+        let data;
         try {
-            return JSON.parse(text);
+            data = JSON.parse(text);
         } catch (e) {
+            if (response.status === 419) {
+                throw new Error('El token de seguridad expiró. Hemos sincronizado tu sesión: por favor pulsa "Guardar" nuevamente.');
+            }
             throw new Error('Respuesta inesperada del servidor.');
         }
-    })
-    .then(data => {
+
+        return { response, data };
+    };
+
+    try {
+        const { response, data } = await ejecutarPeticion();
+
         if (data.status === 'success' || data.message === 'Guardado correctamente') {
             const pInput = form.querySelector('#placa_id_equipo');
             const placa = data.placa_id || (pInput ? pInput.value : '') || '';
@@ -369,23 +468,23 @@ async function enviarFormulario() {
                 true
             );
         }
-    })
-    .catch(err => {
+    } catch (err) {
         console.error('Error al guardar portátil:', err);
         mostrarModal(
             '<i class="fa-solid fa-triangle-exclamation text-danger"></i>', 
-            'Error de comunicación', 
+            'Aviso del sistema', 
             escapeHtml(err.message || 'Ocurrió un error procesando el registro.'),
             true
         );
-    })
-    .finally(() => {
+    } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Guardar Registro de Portátil';
-    });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    iniciarHeartbeatSesion();
+
     const estadoSelect = document.getElementById('estado_actual_equipo');
     if (estadoSelect) {
         evaluarEstadoEquipo(estadoSelect.value);

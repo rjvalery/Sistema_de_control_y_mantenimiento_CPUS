@@ -15,44 +15,105 @@ class EvidenciaController extends Controller
      */
     public function ver(Request $request, $modulo, $anio, $mes, $dia, $archivo)
     {
-        // 1. Comprobación prioritaria en subcarpeta por módulo (ej: fotos/diagnostico/2026/Octubre/05/B88147.jpg)
-        $moduloAliases = match(strtolower($modulo)) {
-            'cpus', 'cpu', 'equipos', 'diagnostico' => ['diagnostico', 'cpus', 'equipos'],
-            'portatiles', 'portatil', 'laptop'     => ['portatiles', 'portatil'],
-            'soplado', 'mantenimiento'             => ['soplado', 'mantenimiento'],
-            default                                => [strtolower($modulo)]
-        };
+        try {
+            $basePath = UploadService::getBasePath();
 
-        foreach ($moduloAliases as $mod) {
-            $rutaModulo = $basePath . DIRECTORY_SEPARATOR . $mod . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia . DIRECTORY_SEPARATOR . $archivo;
-            if (File::exists($rutaModulo) && !File::isDirectory($rutaModulo)) {
-                return response()->file($rutaModulo);
+            // Normalización y variantes del módulo
+            $moduloAliases = match(strtolower($modulo)) {
+                'cpus', 'cpu', 'equipos', 'diagnostico' => ['diagnostico', 'cpus', 'equipos'],
+                'portatiles', 'portatil', 'laptop'     => ['portatiles', 'portatil'],
+                'soplado', 'mantenimiento'             => ['soplado', 'mantenimiento'],
+                default                                => [strtolower($modulo)]
+            };
+
+            // Variantes de nombre de mes (español, numérico con y sin cero)
+            $mesesVariantes = array_unique(array_filter([
+                $mes,
+                is_numeric($mes) ? UploadService::getNombreMes((int)$mes) : null,
+                is_numeric($mes) ? str_pad($mes, 2, '0', STR_PAD_LEFT) : null,
+                is_numeric($mes) ? (string)(int)$mes : null,
+                ucfirst(strtolower($mes)),
+                strtolower($mes),
+            ]));
+
+            // Variantes de día (ej: "05" y "5")
+            $diasVariantes = array_unique(array_filter([
+                $dia,
+                str_pad($dia, 2, '0', STR_PAD_LEFT),
+                is_numeric($dia) ? (string)(int)$dia : null,
+            ]));
+
+            // Variantes de archivo (nombre directo o decodificado)
+            $archivosVariantes = array_unique(array_filter([
+                $archivo,
+                urldecode($archivo),
+            ]));
+
+            // 1. Búsqueda prioritaria con subcarpeta por módulo
+            foreach ($moduloAliases as $mod) {
+                foreach ($mesesVariantes as $mV) {
+                    foreach ($diasVariantes as $dV) {
+                        foreach ($archivosVariantes as $aV) {
+                            $rutaModulo = $basePath . DIRECTORY_SEPARATOR . $mod . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mV . DIRECTORY_SEPARATOR . $dV . DIRECTORY_SEPARATOR . $aV;
+                            if (File::exists($rutaModulo) && !File::isDirectory($rutaModulo)) {
+                                $mime = File::mimeType($rutaModulo) ?: 'image/jpeg';
+                                return response()->file($rutaModulo, [
+                                    'Content-Type'        => $mime,
+                                    'Content-Disposition' => 'inline; filename="' . basename($rutaModulo) . '"',
+                                    'Cache-Control'       => 'public, max-age=86400',
+                                ]);
+                            }
+                        }
+                    }
+                }
             }
-        }
 
-        // 2. Ruta física sin subcarpeta de módulo (compatibilidad fotos/{anio}/{mes}/{dia}/{archivo})
-        $rutaFisica = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mes . DIRECTORY_SEPARATOR . $dia . DIRECTORY_SEPARATOR . $archivo;
-
-        if (File::exists($rutaFisica) && !File::isDirectory($rutaFisica)) {
-            return response()->file($rutaFisica);
-        }
-
-        // 3. Fallbacks de compatibilidad (raíz de fotos o directorio público)
-        $fallbacks = [
-            $basePath . DIRECTORY_SEPARATOR . $archivo,
-            public_path("fotos/{$anio}/{$mes}/{$dia}/{$archivo}"),
-            public_path("fotos/{$archivo}"),
-            storage_path("app/public/evidencias/{$archivo}"),
-        ];
-
-        foreach ($fallbacks as $fb) {
-            if (File::exists($fb) && !File::isDirectory($fb)) {
-                return response()->file($fb);
+            // 2. Ruta física sin subcarpeta de módulo (compatibilidad fotos/{anio}/{mes}/{dia}/{archivo})
+            foreach ($mesesVariantes as $mV) {
+                foreach ($diasVariantes as $dV) {
+                    foreach ($archivosVariantes as $aV) {
+                        $rutaFisica = $basePath . DIRECTORY_SEPARATOR . $anio . DIRECTORY_SEPARATOR . $mV . DIRECTORY_SEPARATOR . $dV . DIRECTORY_SEPARATOR . $aV;
+                        if (File::exists($rutaFisica) && !File::isDirectory($rutaFisica)) {
+                            $mime = File::mimeType($rutaFisica) ?: 'image/jpeg';
+                            return response()->file($rutaFisica, [
+                                'Content-Type'        => $mime,
+                                'Content-Disposition' => 'inline; filename="' . basename($rutaFisica) . '"',
+                                'Cache-Control'       => 'public, max-age=86400',
+                            ]);
+                        }
+                    }
+                }
             }
-        }
 
-        // Si no existe el archivo físico, servir placeholder SVG
-        return UploadService::retornarPlaceholder($archivo);
+            // 3. Fallbacks de compatibilidad (raíz de fotos o directorio público/storage)
+            foreach ($archivosVariantes as $aV) {
+                $fallbacks = [
+                    $basePath . DIRECTORY_SEPARATOR . $aV,
+                    public_path("fotos/{$anio}/{$mes}/{$dia}/{$aV}"),
+                    public_path("fotos/{$aV}"),
+                    public_path("uploads/{$aV}"),
+                    storage_path("app/public/evidencias/{$aV}"),
+                    storage_path("app/public/{$aV}"),
+                ];
+
+                foreach ($fallbacks as $fb) {
+                    if (File::exists($fb) && !File::isDirectory($fb)) {
+                        $mime = File::mimeType($fb) ?: 'image/jpeg';
+                        return response()->file($fb, [
+                            'Content-Type'        => $mime,
+                            'Content-Disposition' => 'inline; filename="' . basename($fb) . '"',
+                            'Cache-Control'       => 'public, max-age=86400',
+                        ]);
+                    }
+                }
+            }
+
+            // Si no existe el archivo físico, servir placeholder SVG elegante
+            return UploadService::retornarPlaceholder($archivo);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("EvidenciaController: Error al servir imagen: " . $e->getMessage());
+            return UploadService::retornarPlaceholder($archivo);
+        }
     }
 
     /**
@@ -61,29 +122,34 @@ class EvidenciaController extends Controller
      */
     public function show(string $path)
     {
-        $basePath = UploadService::getBasePath();
-        $pathLimpio = ltrim($path, '/\\');
+        try {
+            $basePath = UploadService::getBasePath();
+            $pathLimpio = ltrim($path, '/\\');
 
-        $candidatos = [
-            "{$basePath}/{$pathLimpio}",
-            public_path("fotos/{$pathLimpio}"),
-            storage_path("app/public/evidencias/{$pathLimpio}"),
-            storage_path("app/public/{$pathLimpio}"),
-            public_path($pathLimpio),
-        ];
+            $candidatos = [
+                "{$basePath}/{$pathLimpio}",
+                public_path("fotos/{$pathLimpio}"),
+                storage_path("app/public/evidencias/{$pathLimpio}"),
+                storage_path("app/public/{$pathLimpio}"),
+                public_path($pathLimpio),
+            ];
 
-        foreach ($candidatos as $ruta) {
-            $rutaNormalizada = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $ruta);
-            if (File::exists($rutaNormalizada) && !File::isDirectory($rutaNormalizada)) {
-                $mime = File::mimeType($rutaNormalizada) ?: 'image/jpeg';
-                return response()->file($rutaNormalizada, [
-                    'Content-Type'        => $mime,
-                    'Content-Disposition' => 'inline; filename="' . basename($rutaNormalizada) . '"',
-                    'Cache-Control'       => 'public, max-age=86400',
-                ]);
+            foreach ($candidatos as $ruta) {
+                $rutaNormalizada = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $ruta);
+                if (File::exists($rutaNormalizada) && !File::isDirectory($rutaNormalizada)) {
+                    $mime = File::mimeType($rutaNormalizada) ?: 'image/jpeg';
+                    return response()->file($rutaNormalizada, [
+                        'Content-Type'        => $mime,
+                        'Content-Disposition' => 'inline; filename="' . basename($rutaNormalizada) . '"',
+                        'Cache-Control'       => 'public, max-age=86400',
+                    ]);
+                }
             }
-        }
 
-        return UploadService::retornarPlaceholder(basename($path));
+            return UploadService::retornarPlaceholder(basename($path));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("EvidenciaController: Error al mostrar imagen por path: " . $e->getMessage());
+            return UploadService::retornarPlaceholder(basename($path));
+        }
     }
 }

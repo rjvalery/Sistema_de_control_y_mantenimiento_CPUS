@@ -17,18 +17,24 @@
             <div class="text-center mb-4">
                 <i class="fa-solid fa-microchip text-primary fa-2x mb-2"></i>
                 <h1 class="h4 mb-1">Control CPUs</h1>
-                <p class="text-muted small mb-0">Ingrese con su usuario de administración</p>
+                <p class="text-muted small mb-0">Ingrese con su usuario del sistema</p>
             </div>
 
             @if (session('msg'))
-                <div class="alert alert-success">{{ session('msg') }}</div>
+                <div class="alert alert-success d-flex align-items-center py-2" role="alert">
+                    <i class="fa-solid fa-circle-check me-2"></i>
+                    <div>{{ session('msg') }}</div>
+                </div>
             @endif
             @if (session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
+                <div class="alert alert-danger d-flex align-items-center py-2" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>
+                    <div>{{ session('error') }}</div>
+                </div>
             @endif
             @if ($errors->any())
-                <div class="alert alert-danger">
-                    <ul class="mb-0">
+                <div class="alert alert-danger py-2">
+                    <ul class="mb-0 ps-3">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
@@ -39,18 +45,54 @@
             <form action="{{ route('login.authenticate') }}" method="post" autocomplete="off">
                 @csrf
                 <div class="mb-3">
-                    <label for="usuario" class="form-label fw-semibold">Usuario</label>
-                    <input type="text" class="form-control" id="usuario" name="usuario" value="{{ old('usuario') }}" required autofocus>
+                    <label for="usuario" class="form-label fw-semibold">Usuario o Nombre</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-secondary"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" class="form-control" id="usuario" name="usuario" value="{{ old('usuario') }}" placeholder="Ej: admin o rjvalery" required autofocus>
+                    </div>
                 </div>
-                <div class="mb-4">
+
+                <div class="mb-3">
                     <label for="password" class="form-label fw-semibold">Contraseña</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-secondary"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                        <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Mostrar/Ocultar contraseña">
+                            <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                    <div id="capsLockWarning" class="form-text text-warning d-none">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Bloq Mayús (Caps Lock) está activado
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
                     <i class="fa-solid fa-right-to-bracket me-1"></i> Ingresar
                 </button>
             </form>
         </div>
     </div>
+
+    <script>
+        const passwordInput = document.getElementById('password');
+        const toggleBtn = document.getElementById('togglePasswordBtn');
+        const toggleIcon = document.getElementById('togglePasswordIcon');
+        const capsWarning = document.getElementById('capsLockWarning');
+
+        toggleBtn.addEventListener('click', function() {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            toggleIcon.classList.toggle('fa-eye', !isPassword);
+            toggleIcon.classList.toggle('fa-eye-slash', isPassword);
+        });
+
+        passwordInput.addEventListener('keyup', function(e) {
+            if (e.getModifierState && e.getModifierState('CapsLock')) {
+                capsWarning.classList.remove('d-none');
+            } else {
+                capsWarning.classList.add('d-none');
+            }
+        });
+    </script>
 </body>
 </html>
