@@ -42,7 +42,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('login.authenticate') }}" method="post" autocomplete="off">
+            <form id="loginForm" action="{{ route('login.authenticate') }}" method="post" autocomplete="off">
                 @csrf
                 <div class="mb-3">
                     <label for="usuario" class="form-label fw-semibold">Usuario o Nombre</label>
@@ -66,18 +66,40 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
-                    <i class="fa-solid fa-right-to-bracket me-1"></i> Ingresar
+                <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                    <i class="fa-solid fa-right-to-bracket me-1" id="submitIcon"></i> <span id="submitText">Ingresar</span>
                 </button>
             </form>
         </div>
     </div>
 
     <script>
+        const loginForm = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitIcon = document.getElementById('submitIcon');
+        const submitText = document.getElementById('submitText');
+        const userInput = document.getElementById('usuario');
         const passwordInput = document.getElementById('password');
         const toggleBtn = document.getElementById('togglePasswordBtn');
         const toggleIcon = document.getElementById('togglePasswordIcon');
         const capsWarning = document.getElementById('capsLockWarning');
+
+        // Prevenir doble envío y trim de usuario
+        loginForm.addEventListener('submit', function(e) {
+            userInput.value = userInput.value.trim();
+            if (!loginForm.checkValidity()) {
+                return;
+            }
+            submitBtn.disabled = true;
+            submitIcon.className = 'fa-solid fa-spinner fa-spin me-1';
+            submitText.textContent = 'Ingresando...';
+            // Por si la red tarda o hay validación en cliente
+            setTimeout(function() {
+                submitBtn.disabled = false;
+                submitIcon.className = 'fa-solid fa-right-to-bracket me-1';
+                submitText.textContent = 'Ingresar';
+            }, 8000);
+        });
 
         toggleBtn.addEventListener('click', function() {
             const isPassword = passwordInput.getAttribute('type') === 'password';
@@ -91,6 +113,31 @@
                 capsWarning.classList.remove('d-none');
             } else {
                 capsWarning.classList.add('d-none');
+            }
+        });
+
+        // Renovación automática de token CSRF para evitar error 419 por inactividad
+        function refreshCsrfToken() {
+            fetch("{{ route('csrf.refresh') }}", {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.token) {
+                    const tokenInput = document.querySelector('input[name="_token"]');
+                    if (tokenInput) tokenInput.value = data.token;
+                }
+            })
+            .catch(() => {});
+        }
+
+        // Refrescar cada 10 minutos
+        setInterval(refreshCsrfToken, 600000);
+
+        // Refrescar si el usuario vuelve a la pestaña tras estar inactivo
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                refreshCsrfToken();
             }
         });
     </script>

@@ -28,6 +28,16 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'El token de seguridad ha expirado. Por favor, recargue la página.'
+                ], 419);
+            }
+            return redirect()->route('login')->with('error', 'Su sesión o enlace expiró por inactividad. Por favor ingrese sus credenciales nuevamente.');
+        });
+
         $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -39,6 +49,16 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, Request $request) {
+            if ($e->getStatusCode() === 419) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'El token de seguridad ha expirado. Por favor recargue la página.'
+                    ], 419);
+                }
+                return redirect()->route('login')->with('error', 'Su sesión expiró por inactividad. Por favor intente ingresar nuevamente.');
+            }
+
             if ($e->getStatusCode() === 403) {
                 if ($request->expectsJson() || $request->is('api/*')) {
                     return response()->json([

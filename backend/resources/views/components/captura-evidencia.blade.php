@@ -13,21 +13,21 @@
                accept="image/*">
 
         <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
-            <!-- Botón Cámara con input nativo superpuesto -->
+            <!-- Botón Cámara con input nativo superpuesto y label -->
             <div class="position-relative d-inline-block">
-                <button type="button" class="btn btn-primary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                <label for="foto_camara_diagnostico" class="btn btn-primary fw-bold py-2 px-3 shadow-sm m-0" style="cursor: pointer;">
                     <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
-                </button>
+                </label>
                 <input type="file" id="foto_camara_diagnostico" accept="image/*" capture="environment" 
                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
                        onchange="{{ $onChange }}(this)">
             </div>
 
-            <!-- Botón Galería con input nativo superpuesto -->
+            <!-- Botón Galería con input nativo superpuesto y label -->
             <div class="position-relative d-inline-block">
-                <button type="button" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                <label for="foto_galeria_diagnostico" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm m-0" style="cursor: pointer;">
                     <i class="fa-solid fa-images me-2"></i> Galería / Archivos
-                </button>
+                </label>
                 <input type="file" id="foto_galeria_diagnostico" accept="image/*" 
                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
                        onchange="{{ $onChange }}(this)">

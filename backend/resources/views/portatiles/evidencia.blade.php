@@ -93,17 +93,25 @@
                                        accept="image/*">
 
                                 <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
-                                    <!-- Botón Cámara -->
-                                    <button type="button" class="btn btn-primary btn-lg px-4 py-2 fw-bold shadow-sm" onclick="document.getElementById('foto_camara').click()">
-                                        <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
-                                    </button>
-                                    <input type="file" id="foto_camara" class="d-none" accept="image/*" capture="environment" onchange="manejarSeleccionFoto(this)">
+                                    <!-- Botón Cámara con input nativo superpuesto y label -->
+                                    <div class="position-relative d-inline-block">
+                                        <label for="foto_camara" class="btn btn-primary btn-lg px-4 py-2 fw-bold shadow-sm m-0" style="cursor: pointer;">
+                                            <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
+                                        </label>
+                                        <input type="file" id="foto_camara" accept="image/*" capture="environment" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFoto(this)">
+                                    </div>
 
-                                    <!-- Botón Galería -->
-                                    <button type="button" class="btn btn-outline-secondary btn-lg px-4 py-2 fw-bold shadow-sm" onclick="document.getElementById('foto_galeria').click()">
-                                        <i class="fa-solid fa-images me-2"></i> Galería / Archivos
-                                    </button>
-                                    <input type="file" id="foto_galeria" class="d-none" accept="image/*" onchange="manejarSeleccionFoto(this)">
+                                    <!-- Botón Galería con input nativo superpuesto y label -->
+                                    <div class="position-relative d-inline-block">
+                                        <label for="foto_galeria" class="btn btn-outline-secondary btn-lg px-4 py-2 fw-bold shadow-sm m-0" style="cursor: pointer;">
+                                            <i class="fa-solid fa-images me-2"></i> Galería / Archivos
+                                        </label>
+                                        <input type="file" id="foto_galeria" accept="image/*" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFoto(this)">
+                                    </div>
                                 </div>
                                 
                                 <div id="upload-label" class="form-text mt-2 text-muted fw-semibold">
@@ -120,8 +128,13 @@
                                 </div>
 
                                 <!-- Vista previa instantánea (0 ms) -->
-                                <div id="preview-container" class="mt-3 d-none">
-                                    <img id="preview" src="#" alt="Vista previa del portátil" class="img-thumbnail shadow-sm rounded" style="max-height: 260px; max-width: 100%;">
+                                <div id="preview-container" class="mt-3 text-center d-none">
+                                    <div class="position-relative d-inline-block">
+                                        <img id="preview" src="#" alt="Vista previa del portátil" class="img-thumbnail shadow-sm rounded" style="max-height: 260px; max-width: 100%;">
+                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Quitar foto" onclick="limpiarPrevisualizacion()">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
                                     <div class="mt-2">
                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">
                                             <i class="fa-solid fa-circle-check me-1"></i> Foto lista para enviar
@@ -200,6 +213,27 @@ function manejarSeleccionFoto(input) {
     // Limpiar el valor del input para que el evento onchange vuelva a dispararse 
     // incluso si la tablet/teléfono asigna el mismo nombre temporal (ej. image.jpg)
     input.value = '';
+}
+
+function limpiarPrevisualizacion() {
+    fotoOptimBlob = null;
+    optimizacionPromesa = null;
+    const principal = document.getElementById('foto_equipo');
+    if (principal) principal.value = '';
+    const camara = document.getElementById('foto_camara');
+    if (camara) camara.value = '';
+    const galeria = document.getElementById('foto_galeria');
+    if (galeria) galeria.value = '';
+    const respaldo = document.getElementById('foto_respaldo_portatil');
+    if (respaldo) respaldo.value = '';
+    const previewContainer = document.getElementById('preview-container');
+    if (previewContainer) previewContainer.classList.add('d-none');
+    const preview = document.getElementById('preview');
+    if (preview) preview.src = '#';
+    const uploadLabel = document.getElementById('upload-label');
+    if (uploadLabel) {
+        uploadLabel.innerHTML = 'Toca un botón para activar la cámara o seleccionar de la galería de tu dispositivo.';
+    }
 }
 
 function optimizarImagen(file) {

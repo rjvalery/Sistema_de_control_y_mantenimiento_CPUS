@@ -15,18 +15,18 @@ Route::get('/login', [AuthController::class, 'index'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Renovación y heartbeat de token CSRF para formularios y login
+Route::get('/refresh-csrf', function () {
+    return response()->json([
+        'token'  => csrf_token(),
+        'status' => 'success'
+    ]);
+})->name('csrf.refresh');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/metricas', [\App\Http\Controllers\DashboardController::class, 'metricas'])->name('dashboard.metricas');
     Route::get('/dashboard/exportar-bitacora', [\App\Http\Controllers\DashboardController::class, 'exportarBitacora'])->name('dashboard.exportar');
-
-    // Renovación y heartbeat de token CSRF para formularios
-    Route::get('/refresh-csrf', function () {
-        return response()->json([
-            'token'  => csrf_token(),
-            'status' => 'success'
-        ]);
-    })->name('csrf.refresh');
 
     // Inventario (API para búsqueda AJAX)
     Route::get('/inventario/buscar-equipo', [\App\Http\Controllers\InventarioController::class, 'buscarEquipo'])->name('inventario.buscar');
