@@ -20,11 +20,24 @@ function mostrarModal(icono, titulo, mensaje) {
 
 function evaluarEstado(estado) {
     const secGarantia = document.getElementById('seccion_garantia');
-    if (!secGarantia) return;
+    const secFoto = document.getElementById('seccion_evidencia_foto');
+    const principal = document.getElementById('foto_equipo');
+
     if (estado === 'Garantia') {
-        secGarantia.classList.remove('d-none');
+        if (secGarantia) secGarantia.classList.remove('d-none');
+        // Solo eliminar / ocultar el botón de foto cuando se esté seleccionando garantía
+        if (secFoto) secFoto.classList.add('d-none');
+        if (principal) {
+            principal.required = false;
+            principal.value = '';
+        }
+        fotoOptimBlob = null;
+        limpiarPrevisualizacion();
     } else {
-        secGarantia.classList.add('d-none');
+        if (secGarantia) secGarantia.classList.add('d-none');
+        // Mostrar el botón de foto para los demás estados del diagnóstico
+        if (secFoto) secFoto.classList.remove('d-none');
+        evaluarGestion();
     }
 }
 
@@ -43,6 +56,9 @@ function evaluarGestion() {
     const fotoPrincipal = document.getElementById('foto_equipo');
     const fotoAsterisco = document.getElementById('foto_asterisco');
     const uploadLabel   = document.getElementById('upload-label');
+    const estadoAct     = document.getElementById('estado_actual');
+    const esGarantia    = (estadoAct && estadoAct.value === 'Garantia');
+    const secFoto       = document.getElementById('seccion_evidencia_foto');
 
     if (valor === 'Intervencion') {
         const seccion_intervencion = document.getElementById('seccion_intervencion');
@@ -61,14 +77,20 @@ function evaluarGestion() {
         if(seccion_diagnostico_campos) seccion_diagnostico_campos.classList.remove('d-none');
     }
 
-    if (valor === 'Baja') {
+    if (esGarantia) {
+        if (secFoto) secFoto.classList.add('d-none');
         if (fotoPrincipal) fotoPrincipal.required = false;
-        if (fotoAsterisco) fotoAsterisco.innerHTML = '<span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">(Opcional)</span>';
-        if (uploadLabel) uploadLabel.textContent = 'Para equipos en baja la foto es opcional.';
     } else {
-        if (fotoPrincipal) fotoPrincipal.required = !fotoOptimBlob;
-        if (fotoAsterisco) fotoAsterisco.innerHTML = '<span class="text-danger">*</span>';
-        if (uploadLabel && !fotoOptimBlob) uploadLabel.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
+        if (secFoto) secFoto.classList.remove('d-none');
+        if (valor === 'Baja') {
+            if (fotoPrincipal) fotoPrincipal.required = false;
+            if (fotoAsterisco) fotoAsterisco.innerHTML = '<span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">(Opcional)</span>';
+            if (uploadLabel) uploadLabel.textContent = 'Para equipos en baja la foto es opcional.';
+        } else {
+            if (fotoPrincipal) fotoPrincipal.required = !fotoOptimBlob;
+            if (fotoAsterisco) fotoAsterisco.innerHTML = '<span class="text-danger">*</span>';
+            if (uploadLabel && !fotoOptimBlob) uploadLabel.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
+        }
     }
 }
 
@@ -156,8 +178,10 @@ function limpiarPrevisualizacion() {
     if (con) con.classList.add('d-none');
     if (lbl) lbl.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
     
+    const estadoAct = document.getElementById('estado_actual');
+    const esGarantia = (estadoAct && estadoAct.value === 'Garantia');
     const tipoGestionEl = document.getElementById('tipo_gestion');
-    if (tipoGestionEl && tipoGestionEl.value !== 'Baja' && pri) {
+    if (!esGarantia && tipoGestionEl && tipoGestionEl.value !== 'Baja' && pri) {
         pri.required = true;
     }
 }
@@ -167,8 +191,10 @@ async function enviarFormulario() {
     const tipoGestionEl2 = document.getElementById('tipo_gestion');
     const tipoGestion = tipoGestionEl2 ? tipoGestionEl2.value : '';
     const principal = document.getElementById('foto_equipo');
+    const estadoAct = document.getElementById('estado_actual');
+    const esGarantia = (estadoAct && estadoAct.value === 'Garantia');
 
-    if (tipoGestion === 'Baja') {
+    if (esGarantia || tipoGestion === 'Baja') {
         if (principal) principal.required = false;
     } else {
         if (principal && !fotoOptimBlob && (!principal.files || !principal.files[0])) {
@@ -204,7 +230,11 @@ async function enviarFormulario() {
         formData.set('serial', inputSerialEl.value.trim());
     }
 
-    if (fotoOptimBlob) {
+    if (esGarantia) {
+        formData.delete('evidencia');
+        formData.delete('foto');
+        formData.delete('foto_equipo');
+    } else if (fotoOptimBlob) {
         formData.set('evidencia', fotoOptimBlob, 'foto_diagnostico.jpg');
         formData.delete('foto');
         formData.delete('foto_equipo');
@@ -246,6 +276,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputTraslado = document.getElementById('num_traslado');
     let debounceTimer = null;
 
+    if (inputTraslado) {
+        inputTraslado.addEventListener('input', function() {
+            this.dataset.manual = this.value.trim() !== '' ? 'true' : 'false';
+        });
+    }
+
     if (placaInput) {
         placaInput.addEventListener('input', function() {
             const val = this.value.trim();
@@ -254,13 +290,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (val.length < 3) {
                 if (feedbackDiv) feedbackDiv.innerHTML = '';
                 if (spinnerPlaca) spinnerPlaca.classList.add('d-none');
+                const inputSerial = document.getElementById('serial');
+                if (inputSerial) inputSerial.value = '';
+                if (inputTraslado && inputTraslado.dataset.autofilled === 'true' && inputTraslado.dataset.manual !== 'true') {
+                    inputTraslado.value = '';
+                    inputTraslado.dataset.autofilled = 'false';
+                }
                 return;
             }
 
             if (spinnerPlaca) spinnerPlaca.classList.remove('d-none');
             
             debounceTimer = setTimeout(() => {
-                fetch(window.AppUrls.buscarEquipo + '?query=' + encodeURIComponent(val))
+                fetch(window.AppUrls.buscarEquipo + '?query=' + encodeURIComponent(val) + '&modulo=diagnostico')
                     .then(r => r.json())
                     .then(res => {
                         if (spinnerPlaca) spinnerPlaca.classList.add('d-none');
@@ -268,8 +310,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         if (res.encontrado && res.equipo) {
                             const eq = res.equipo;
-                            if (inputTraslado && !inputTraslado.value && eq.num_traslado) {
+                            if (inputTraslado && inputTraslado.dataset.manual !== 'true' && eq.num_traslado) {
                                 inputTraslado.value = eq.num_traslado;
+                                inputTraslado.dataset.autofilled = 'true';
+                                inputTraslado.classList.add('is-valid');
+                                setTimeout(() => inputTraslado.classList.remove('is-valid'), 2500);
                             }
 
                             const inputSerial = document.getElementById('serial');
@@ -327,9 +372,24 @@ document.addEventListener('DOMContentLoaded', function() {
                                 `;
                             }
                         } else {
+                            const inputSerial = document.getElementById('serial');
+                            if (inputSerial) inputSerial.value = '';
+                            if (inputTraslado && inputTraslado.dataset.autofilled === 'true' && inputTraslado.dataset.manual !== 'true') {
+                                inputTraslado.value = '';
+                                inputTraslado.dataset.autofilled = 'false';
+                            }
                             feedbackDiv.innerHTML = `
-                                <div class="alert alert-light border py-1 px-2 mb-0 small text-muted">
-                                    <i class="fa-solid fa-info-circle me-1 text-secondary"></i> No registrado en cargue masivo previo. Se registrará como equipo nuevo.
+                                <div class="alert alert-info py-2 px-3 mb-0 small border-info shadow-sm">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fa-solid fa-circle-info text-info me-2 fs-5"></i>
+                                        <strong>Equipo no encontrado en inventario masivo previo</strong>
+                                    </div>
+                                    <div class="text-dark">
+                                        Se registrará como <strong>equipo nuevo</strong> con el ID/Placa: <code>${escapeHtml(val)}</code>.
+                                    </div>
+                                    <div class="text-muted mt-1 small">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i> Por favor completa el <strong>Número de Traslado</strong> manualmente arriba y los datos del diagnóstico.
+                                    </div>
                                 </div>
                             `;
                         }

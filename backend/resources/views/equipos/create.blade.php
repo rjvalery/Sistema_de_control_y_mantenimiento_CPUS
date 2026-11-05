@@ -198,7 +198,10 @@
                             </div>
                         </div>
 
-                        <x-captura-evidencia name="evidencia" label="Evidencia Fotográfica" />
+                        <!-- Evidencia Fotográfica (Se oculta dinámicamente si el estado es Garantía) -->
+                        <div id="seccion_evidencia_foto" class="col-12">
+                            <x-captura-evidencia name="evidencia" label="Evidencia Fotográfica" />
+                        </div>
 
                         <div class="col-12 mt-4">
                             <button type="button" class="btn btn-primary w-100 py-2 fs-6 fw-bold" id="btnGuardar" onclick="enviarFormulario()">

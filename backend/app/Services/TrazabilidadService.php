@@ -33,31 +33,39 @@ class TrazabilidadService
     {
         $candidatosTraslado = [];
 
-        $inv = InventarioGeneral::whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos)
-            ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
-            ->orderBy('id', 'desc')->first();
+        $inv = InventarioGeneral::where(function($q) use ($terminos) {
+            $q->whereIn('placa_id', $terminos)
+              ->orWhereIn('serial', $terminos)
+              ->orWhereIn('identificador_1', $terminos)
+              ->orWhereIn('identificador_2', $terminos);
+        })->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
+          ->orderBy('id', 'desc')->first();
         if ($inv) {
             $candidatosTraslado[] = ['num' => trim($inv->num_traslado), 'fecha' => $inv->created_at ?? $inv->fecha_intervencion ?? now()->subYears(10)];
         }
 
-        $eq = Equipo::whereIn('placa_id', $terminos)
-            ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
-            ->orderBy('id', 'desc')->first();
+        $eq = Equipo::where(function($q) use ($terminos) {
+            $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+        })->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
+          ->orderBy('id', 'desc')->first();
         if ($eq) {
             $candidatosTraslado[] = ['num' => trim($eq->num_traslado), 'fecha' => $eq->fecha_creacion ?? $eq->created_at ?? now()];
         }
 
-        $so = SopladoRegistro::whereIn('placa_id', $terminos)
-            ->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
-            ->orderBy('id', 'desc')->first();
+        $so = SopladoRegistro::where(function($q) use ($terminos) {
+            $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+        })->whereNotNull('num_traslado')->where('num_traslado', '!=', '')
+          ->orderBy('id', 'desc')->first();
         if ($so) {
             $candidatosTraslado[] = ['num' => trim($so->num_traslado), 'fecha' => $so->created_at ?? $so->fecha_registro ?? now()];
         }
 
         $po = GarantiaPortatil::where(function($q) use ($terminos) {
-            $q->whereIn('placa_id_equipo', $terminos)->orWhereIn('serial_disco', $terminos);
+            $q->whereIn('placa_id_equipo', $terminos)
+              ->orWhereIn('serial', $terminos)
+              ->orWhereIn('serial_disco', $terminos);
         })->whereNotNull('numero_traslado')->where('numero_traslado', '!=', '')
-        ->orderBy('id', 'desc')->first();
+          ->orderBy('id', 'desc')->first();
         if ($po) {
             $candidatosTraslado[] = ['num' => trim($po->numero_traslado), 'fecha' => $po->created_at ?? $po->fecha_creacion ?? now()];
         }
@@ -78,33 +86,98 @@ class TrazabilidadService
      */
     public function obtenerDatosBase(string $termino)
     {
-        $inventario = InventarioGeneral::where('identificador_1', $termino)
-            ->orWhere('identificador_2', $termino)
-            ->orWhere('placa_id', $termino)
-            ->orWhere('serial', $termino)
-            ->orderBy('id', 'desc')
-            ->first();
+        $termino = trim($termino);
+        $candidatos = [$termino];
+        if (preg_match('/^B([0-9]+)$/i', $termino, $m)) {
+            $candidatos[] = $m[1];
+            $candidatos[] = 'BR' . $m[1];
+        } elseif (preg_match('/^BR([0-9]+)$/i', $termino, $m)) {
+            $candidatos[] = $m[1];
+            $candidatos[] = 'B' . $m[1];
+        } elseif (ctype_digit($termino)) {
+            $candidatos[] = 'B' . $termino;
+            $candidatos[] = 'BR' . $termino;
+        }
+        $candidatos = array_values(array_unique($candidatos));
 
-        $terminos = array_values(array_unique(array_filter([
-            $termino, 
-            $inventario?->placa_id, 
-            $inventario?->serial, 
-            $inventario?->identificador_1, 
-            $inventario?->identificador_2
-        ])));
+        $inventario = InventarioGeneral::where(function($q) use ($candidatos) {
+            $q->whereIn('identificador_1', $candidatos)
+              ->orWhereIn('identificador_2', $candidatos)
+              ->orWhereIn('placa_id', $candidatos)
+              ->orWhereIn('serial', $candidatos)
+              ->orWhereIn('ref_principal', $candidatos);
+        })->orderBy('id', 'desc')->first();
+
+        // Respaldo con TRIM únicamente (sin comodines LIKE parciales) para limpiar espacios del Excel
+        if (!$inventario) {
+            $inventario = InventarioGeneral::where(function($q) use ($candidatos) {
+                foreach ($candidatos as $c) {
+                    $q->orWhereRaw("TRIM(placa_id) = ?", [$c])
+                      ->orWhereRaw("TRIM(serial) = ?", [$c])
+                      ->orWhereRaw("TRIM(identificador_1) = ?", [$c])
+                      ->orWhereRaw("TRIM(identificador_2) = ?", [$c])
+                      ->orWhereRaw("TRIM(ref_principal) = ?", [$c]);
+                }
+            })->orderBy('id', 'desc')->first();
+        }
+
+        $equipoPrevio = Equipo::where(function($q) use ($candidatos) {
+            $q->whereIn('placa_id', $candidatos)->orWhereIn('serial', $candidatos);
+        })->orderBy('id', 'desc')->first();
+
+        $sopladoPrevio = SopladoRegistro::where(function($q) use ($candidatos) {
+            $q->whereIn('placa_id', $candidatos)->orWhereIn('serial', $candidatos);
+        })->orderBy('id', 'desc')->first();
+
+        $portatilPrevio = GarantiaPortatil::where(function($q) use ($candidatos) {
+            $q->whereIn('placa_id_equipo', $candidatos)
+              ->orWhereIn('serial', $candidatos)
+              ->orWhereIn('serial_disco', $candidatos);
+        })->orderBy('id', 'desc')->first();
+
+        $terminos = array_values(array_unique(array_filter(array_merge(
+            $candidatos,
+            [
+                $inventario?->placa_id ? trim($inventario->placa_id) : null,
+                $inventario?->serial ? trim($inventario->serial) : null,
+                $inventario?->identificador_1 ? trim($inventario->identificador_1) : null,
+                $inventario?->identificador_2 ? trim($inventario->identificador_2) : null,
+                $equipoPrevio?->placa_id ? trim($equipoPrevio->placa_id) : null,
+                $equipoPrevio?->serial ? trim($equipoPrevio->serial) : null,
+                $sopladoPrevio?->placa_id ? trim($sopladoPrevio->placa_id) : null,
+                $sopladoPrevio?->serial ? trim($sopladoPrevio->serial) : null,
+                $portatilPrevio?->placa_id_equipo ? trim($portatilPrevio->placa_id_equipo) : null,
+                $portatilPrevio?->serial ? trim($portatilPrevio->serial) : null,
+                $portatilPrevio?->serial_disco ? trim($portatilPrevio->serial_disco) : null,
+            ]
+        ))));
         if (empty($terminos)) {
             $terminos = [$termino];
         }
 
         $ultimoTraslado = $this->obtenerUltimoTraslado($terminos);
+        if ($ultimoTraslado === '' && $inventario && !empty(trim((string)$inventario->num_traslado))) {
+            $ultimoTraslado = trim((string)$inventario->num_traslado);
+        }
+
+        $placaBase = $inventario?->placa_id 
+            ?: ($equipoPrevio?->placa_id 
+            ?: ($sopladoPrevio?->placa_id 
+            ?: ($portatilPrevio?->placa_id_equipo ?: $termino)));
+
+        $serialBase = $inventario?->serial 
+            ?: ($equipoPrevio?->serial 
+            ?: ($sopladoPrevio?->serial 
+            ?: ($portatilPrevio?->serial 
+            ?: ($portatilPrevio?->serial_disco ?: ''))));
 
         return [
             'inventario' => $inventario,
             'terminos' => $terminos,
             'datosBase' => [
-                'id'           => $inventario ? $inventario->id : 0,
-                'placa_id'     => $inventario?->placa_id ?? '',
-                'serial'       => $inventario?->serial ?? '',
+                'id'           => $inventario ? $inventario->id : ($equipoPrevio?->id ?? 0),
+                'placa_id'     => trim((string)$placaBase),
+                'serial'       => trim((string)$serialBase),
                 'num_traslado' => $ultimoTraslado,
                 'tipo_equipo'  => $inventario?->tipo_equipo ?? 'CPU / Escritorio',
                 'marca'        => $inventario?->marca ?? '',
@@ -161,7 +234,10 @@ class TrazabilidadService
         }
 
         if ($modulo === 'diagnostico') {
-            $diagnosticoPrevio = Equipo::whereIn('placa_id', $terminos)->latest('id')->first();
+            $diagnosticoPrevio = Equipo::where(function($q) use ($terminos) {
+                $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+            })->latest('id')->first();
+
             $portatilPrevio = GarantiaPortatil::where(function($q) use ($terminos) {
                 $q->whereIn('placa_id_equipo', $terminos)->orWhereIn('serial_disco', $terminos);
             })->latest('id')->first();
@@ -204,7 +280,7 @@ class TrazabilidadService
                     'encontrado' => true,
                     'equipo' => array_merge($datosBase, [
                         'placa_id'              => $diagnosticoPrevio->placa_id ?: $datosBase['placa_id'],
-                        'serial'                => $datosBase['serial'],
+                        'serial'                => $diagnosticoPrevio->serial ?: $datosBase['serial'],
                         'num_traslado'          => $datosBase['num_traslado'] ?: ($diagnosticoPrevio->num_traslado ?? ''),
                         'alerta'                => 'amarillo',
                         'mensaje'               => "Atención: Este equipo ya cuenta con diagnóstico previo realizado por " . $analista . " el " . $fecha . ". Motivo / Comentario previo: " . $falla,
@@ -217,7 +293,9 @@ class TrazabilidadService
                 ];
             }
 
-            $sopladoPrevio = SopladoRegistro::whereIn('placa_id', $terminos)->latest('id')->first();
+            $sopladoPrevio = SopladoRegistro::where(function($q) use ($terminos) {
+                $q->whereIn('placa_id', $terminos)->orWhereIn('serial', $terminos);
+            })->latest('id')->first();
 
             if ($inventario || $sopladoPrevio) {
                 $historialPrevio = '';
@@ -231,7 +309,7 @@ class TrazabilidadService
                     'encontrado' => true,
                     'equipo' => array_merge($datosBase, [
                         'placa_id'         => $datosBase['placa_id'] ?: ($sopladoPrevio->placa_id ?? ''),
-                        'serial'           => $datosBase['serial'],
+                        'serial'           => ($sopladoPrevio ? $sopladoPrevio->serial : null) ?: $datosBase['serial'],
                         'num_traslado'     => $datosBase['num_traslado'] ?: ($sopladoPrevio->num_traslado ?? ''),
                         'alerta'           => 'verde',
                         'mensaje'          => "Equipo apto para diagnóstico inicial.",
