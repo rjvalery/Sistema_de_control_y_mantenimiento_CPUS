@@ -1,7 +1,3 @@
 <?php
-/**
- * Redirección automática al punto de entrada de la aplicación Laravel (backend/public)
- */
-header('Location: backend/public/');
+header('Location: backend/public/login', true, 302);
 exit;
-
